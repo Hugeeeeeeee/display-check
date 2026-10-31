@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#07080b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0c12'/%3E%3Crect x='7' y='7' width='8' height='8' rx='2' fill='%237c9cff'/%3E%3Crect x='17' y='7' width='8' height='8' rx='2' fill='%236ee7b7'/%3E%3Crect x='7' y='17' width='8' height='8' rx='2' fill='%23ffd60a'/%3E%3Crect x='17' y='17' width='8' height='8' rx='2' fill='%23ff453a'/%3E%3C/svg%3E">
+<meta name="description" content="10 项全屏显示器检测：坏点、色阶、灰阶、均匀性、漏光、锐度、拖影、刷新率、可视角度与伽马。本地运行，无需联网。" data-i18n-attr="content:app.desc">
+<meta property="og:title" content="显示器自检 · Display Check" data-i18n-attr="content:app.title">
+<meta property="og:description" content="新显示器到手，用 10 项全屏测试确认坏点、拖影、刷新率与色彩表现。" data-i18n-attr="content:og.desc">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="显示器自检 · Display Check" data-i18n-attr="content:app.title">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="显示器自检 · Display Check" data-i18n-attr="content:app.title">
+<meta name="twitter:description" content="10 项全屏显示器检测，本地运行、无需联网、不上传任何数据。" data-i18n-attr="content:tw.desc">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="referrer" content="no-referrer">
+<title data-i18n="app.title">显示器自检 · Display Check</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<main class="home" id="home">
+  <div class="topbar">
+    <div class="seg" id="langSeg" role="group" aria-label="界面语言"></div>
+    <a class="star-link" id="starLink" href="#" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.46-.25-.78-.6-.01-.62.72-.01 1.23.66 1.4.94.94-.85 1.46-.6 1.53-.46.05-.19.11-.6.11-1.19 0-.66-.23-1.13-.6-1.39-.2-.05-.42-.1.6-.19.38 0 .76.05 1.05.28 0 .19.01.45.01.63 0 .22.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span data-i18n="star.link">GitHub</span>
+    </a>
+  </div>
+
+  <header class="hero">
+    <div class="hero-copy">
+      <div class="eyebrow"><span class="pulse"></span><span data-i18n="hero.eyebrow">DISPLAY CHECK</span></div>
+      <h1 data-i18n-html="hero.title">显示器<span class="accent">自检</span></h1>
+      <p class="lede" data-i18n="hero.lede">新显示器到手，用 10 项全屏测试确认坏点、均匀性、拖影、刷新率与色彩。全程本地运行，无需联网。</p>
+      <div class="hero-actions">
+        <button type="button" class="btn primary" id="startBtn">
+          <span id="startLabel">开始完整检测</span>
+          <span class="btn-arrow" aria-hidden="true">→</span>
+        </button>
+        <button type="button" class="btn ghost" id="reportBtn">
+          <span data-i18n="btn.report">检测报告</span>
+          <span class="btn-badge" id="reportBadge" hidden>0</span>
+        </button>
+        <button type="button" class="btn ghost" id="tipsBtn">
+          <span data-i18n="btn.tips">小抄 · 快捷键</span>
+          <kbd>?</kbd>
+        </button>
+      </div>
+      <p class="hero-note" data-i18n="hero.note">本地运行 · 不上传任何数据 · 结果只保存在本机</p>
+    </div>
+
+    <aside class="readout" aria-label="屏幕信息" data-i18n-attr="aria-label:aria.readout">
+      <div class="stat"><div class="k" data-i18n="stat.res">分辨率</div><div class="v" id="statRes">—</div></div>
+      <div class="stat"><div class="k" data-i18n="stat.hz">刷新率</div><div class="v" id="statHz">测量中…</div></div>
+      <div class="stat"><div class="k" data-i18n="stat.dpr">像素比</div><div class="v" id="statDpr">—</div></div>
+      <div class="stat"><div class="k" data-i18n="stat.gamut">色域 / HDR</div><div class="v" id="statGamut">—</div></div>
+    </aside>
+  </header>
+
+  <div class="section-head">
+    <h2 data-i18n="sec.title">检测项目</h2>
+    <div class="progress-wrap">
+      <div class="progress-label sr-only" id="progressLabel">0 / 10</div>
+      <div class="counts" aria-live="polite">
+        <span class="count pass"><i></i><b id="countPass">0</b> <span data-i18n="label.pass">正常</span></span>
+        <span class="count fail"><i></i><b id="countFail">0</b> <span data-i18n="label.fail">异常</span></span>
+        <span class="count rest"><i></i><b id="countRest">10</b> <span data-i18n="label.rest">未测</span></span>
+      </div>
+      <div class="track"><i id="progressBar"></i></div>
+      <button class="reset" id="resetBtn" type="button" data-i18n="btn.reset">重置</button>
+    </div>
+  </div>
+
+  <section class="grid" id="grid" aria-label="测试列表" data-i18n-attr="aria-label:aria.grid"></section>
+
+  <footer class="foot">
+    <div class="keys" data-i18n-html="foot.keys"><kbd>←</kbd><kbd>→</kbd> 切换测试 &nbsp;·&nbsp; <kbd>F</kbd> 全屏 &nbsp;·&nbsp; <kbd>P</kbd> 正常 &nbsp;·&nbsp; <kbd>X</kbd> 异常 &nbsp;·&nbsp; <kbd>R</kbd> 报告 &nbsp;·&nbsp; <kbd>Esc</kbd> 返回</div>
+    <div class="marked-note"><span class="legend pass"></span><span data-i18n="label.pass">正常</span><span class="legend fail"></span><span data-i18n="label.failMarked">有异常</span></div>
+    <div class="tip" data-i18n="foot.tip">建议关闭系统缩放与夜间模式，使用原生分辨率；漏光与黑阶测试请在暗室进行。标记结果仅保存在本机浏览器。</div>
+  </footer>
+</main>
+
+<div class="stage" id="stage" aria-hidden="true">
+  <div class="test-layer" id="layer"></div>
+
+  <div class="hud hud-top">
+    <div class="bar title-bar">
+      <span class="idx-chip"><b id="hudIdx">01</b><i data-i18n="hud.total">/ 10</i></span>
+      <span class="hud-title" id="hudTitle" data-i18n="hud.testFallback">测试</span>
+      <span class="hud-sub" id="hudSub"></span>
+    </div>
+    <div class="bar icon-bar">
+      <button type="button" class="icon-btn" id="btnPrev" title="上一项 (←)" aria-label="上一项" data-i18n-attr="title:hud.prevKey,aria-label:hud.prev">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <button type="button" class="icon-btn" id="btnNextIcon" title="下一项 (→)" aria-label="下一项" data-i18n-attr="aria-label:hud.next">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+      <button type="button" class="icon-btn" id="btnReport" title="检测报告" aria-label="检测报告" data-i18n-attr="title:btn.report,aria-label:btn.report">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l3 3v15H7z"/><path d="M14 3v4h4"/><path d="M10 13.5l2 2 3.5-3.5"/></svg>
+      </button>
+      <button type="button" class="icon-btn lang-mini" id="hudLang" aria-label="切换语言" data-i18n-attr="aria-label:lang.next"></button>
+      <button type="button" class="icon-btn" id="btnFs" title="全屏 (F)" aria-label="全屏" data-i18n-attr="title:hud.fsKey,aria-label:hud.fs">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 9V4h5M20 15v5h-5M20 9V4h-5M4 15v5h5"/></svg>
+      </button>
+      <button type="button" class="icon-btn" id="btnClose" title="返回 (Esc)" aria-label="返回" data-i18n-attr="title:hud.closeKey,aria-label:hud.close">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="hud hud-bottom">
+    <div class="bar bottom-bar">
+      <div class="hint" id="hudHint"></div>
+      <div class="controls" id="hudControls"></div>
+      <div class="bar-actions">
+        <button type="button" class="mark-btn pass" id="btnPass"><span data-i18n="hud.markPass">✓ 正常</span> <kbd>P</kbd></button>
+        <button type="button" class="mark-btn fail" id="btnFail"><span data-i18n="hud.markFail">✕ 异常</span> <kbd>X</kbd></button>
+        <button type="button" class="icon-btn memo-btn" id="btnMemo" title="添加备注 (M)" aria-label="添加备注" data-i18n-attr="aria-label:hud.memo">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 013 3L8 19z"/><path d="M13.5 6.5l3 3"/></svg>
+        </button>
+        <button type="button" class="next-btn" id="btnNext" data-i18n-html="btn.nextArrow">下一项 <span aria-hidden="true">→</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="report" id="report" aria-hidden="true">
+  <div class="report-inner">
+    <header class="report-head">
+      <div>
+        <div class="eyebrow"><span class="pulse"></span><span data-i18n="report.eyebrow">DISPLAY CHECK REPORT</span></div>
+        <h2 data-i18n="report.title">检测报告</h2>
+        <p class="report-date" id="reportDate"></p>
+      </div>
+      <button type="button" class="icon-btn lang-mini" id="reportLang" aria-label="切换语言" data-i18n-attr="aria-label:lang.next"></button>
+      <button type="button" class="icon-btn report-close" id="reportClose" title="关闭" aria-label="关闭报告" data-i18n-attr="title:btn.close,aria-label:btn.closeReport">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+
+    <aside class="star-bar" id="starBar" hidden>
+      <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 01.68.42l1.63 3.6 3.87.5c.75.1.85.95.12 1.3l-2.86 2.7.72 3.85c.13.7-.6 1.23-1.24.85L8 15.1l-3.46 2.03c-.63.37-1.37-.15-1.24-.85l.72-3.85-2.86-2.7c-.73-.36-.63-1.2.12-1.3l3.87-.5L6.32.67A.75.75 0 018 .25z"/></svg>
+      <div class="star-bar-copy">
+        <strong data-i18n="star.report">觉得有用？欢迎在 GitHub 给个项目 Star</strong>
+        <span data-i18n="star.reportSub">开源、完全本地运行、无统计；Star 只影响这个项目，不会收集你的任何信息。</span>
+        <a class="star-bar-link" id="starBarLink" href="#" target="_blank" rel="noopener noreferrer" data-i18n="star.link">GitHub</a>
+      </div>
+      <button type="button" class="icon-btn star-bar-close" id="starBarClose" aria-label="关闭提示" data-i18n-attr="aria-label:star.close">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </aside>
+
+    <div class="verdict" id="reportVerdict">
+      <div class="verdict-icon" id="verdictIcon">✓</div>
+      <div class="verdict-copy">
+        <strong id="verdictTitle">还差 10 项未测</strong>
+        <span id="verdictSub">完成检测后会在这里生成结论。</span>
+      </div>
+    </div>
+
+    <div class="report-stats">
+      <div class="report-stat pass"><b id="reportPass">0</b><span data-i18n="label.pass">正常</span></div>
+      <div class="report-stat fail"><b id="reportFail">0</b><span data-i18n="label.fail">异常</span></div>
+      <div class="report-stat rest"><b id="reportRest">10</b><span data-i18n="label.rest">未测</span></div>
+    </div>
+
+    <div class="report-grid" id="reportGrid"></div>
+
+    <div class="report-meta" id="reportMeta"></div>
+
+    <div class="report-actions">
+      <button type="button" class="btn primary" id="reportContinue" data-i18n-html="btn.startArrow">开始完整检测 <span aria-hidden="true">→</span></button>
+      <button type="button" class="btn ghost" id="reportCopy" data-i18n="btn.copy">复制文字摘要</button>
+      <button type="button" class="btn ghost" id="reportPrint" data-i18n="btn.print">打印 / 保存 PDF</button>
+      <button type="button" class="btn ghost" id="backupBtn" data-i18n="btn.backup">备份进度</button>
+      <button type="button" class="btn ghost" id="restoreBtn" data-i18n="btn.restore">恢复进度</button>
+      <input type="file" id="restoreInput" accept="application/json,.json" hidden>
+      <button type="button" class="btn ghost" id="reportReset" data-i18n="btn.retest">重新检测</button>
+      <button type="button" class="btn quiet" id="reportHome" data-i18n="btn.home">返回首页</button>
+    </div>
+
+    <p class="report-promo" id="reportPromo"></p>
+    <p class="report-foot" data-i18n="report.foot">结果基于人工目视观察，仅作为选购与退换参考，不代表实验室级测量。</p>
+  </div>
+</section>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<section class="tips" id="tips" aria-hidden="true">
+  <div class="tips-card" role="dialog" aria-modal="true" aria-label="判定小抄与快捷键" data-i18n-attr="aria-label:tips.aria">
+    <header class="tips-head">
+      <h2 data-i18n="tips.title">判定小抄 · 快捷键</h2>
+      <button type="button" class="icon-btn" id="tipsClose" title="关闭 (Esc)" aria-label="关闭" data-i18n-attr="title:btn.closeEsc,aria-label:btn.close">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+    <div class="tips-body">
+      <h3 data-i18n="tips.howTitle">怎么判断结果</h3>
+      <ul class="tips-list">
+        <li><b data-i18n="tips.short.pixels">坏点</b><span data-i18n="tips.pixels">纯色下出现常亮白点、彩点或不亮的黑点即为坏点 / 亮点。</span></li>
+        <li><b data-i18n="tips.short.banding">色阶</b><span data-i18n="tips.banding">渐变出现明显竖条纹说明色深或伽马处理不佳；开抖动后仍断层才可疑。</span></li>
+        <li><b data-i18n="tips.short.grayscale">灰阶</b><span data-i18n="tips.grayscale">黑阶能分辨到 2–3 级、白阶 245–255 有层次即可。</span></li>
+        <li><b data-i18n="tips.short.uniformity">均匀性</b><span data-i18n="tips.uniformity">四角与中心不应有明显暗角或偏色；轻微差异属正常。</span></li>
+        <li><b data-i18n="tips.short.bleed">漏光</b><span data-i18n="tips.bleed">IPS 轻微角落漏光正常，大面积光晕或泛白可考虑退换。</span></li>
+        <li><b data-i18n="tips.short.sharpness">锐度</b><span data-i18n="tips.sharpness">1:1 棋盘格不应出现摩尔纹；文字不应发虚或出现明显彩边。</span></li>
+        <li><b data-i18n="tips.short.response">拖影</b><span data-i18n="tips.response">运动条纹边缘不应有长拖尾、白边或黑边（过冲）。</span></li>
+        <li><b data-i18n="tips.short.refresh">刷新</b><span data-i18n="tips.refresh">实测 Hz 应接近标称值，竖条移动应匀速无跳格。</span></li>
+        <li><b data-i18n="tips.short.viewing">视角</b><span data-i18n="tips.viewing">侧视时颜色不应明显泛白、偏色或丢失细节。</span></li>
+        <li><b data-i18n="tips.short.gamma">伽马</b><span data-i18n="tips.gamma">滑块在 186 附近两侧亮度一致，说明 γ 接近 2.2。</span></li>
+      </ul>
+      <h3 data-i18n="tips.adviceTitle">测试建议</h3>
+      <ul class="tips-list tips-advice">
+        <li><b data-i18n="tips.short.env">环境</b><span data-i18n="tips.env">使用原生分辨率、系统缩放 100%；关闭夜间模式 / 护眼 / HDR 与厂商色彩增强。</span></li>
+        <li><b data-i18n="tips.short.dark">暗室</b><span data-i18n="tips.dark">坏点、漏光、灰阶建议在暗室进行，并让屏幕预热 20–30 分钟。</span></li>
+        <li><b data-i18n="tips.short.full">全屏</b><span data-i18n="tips.full">响应与刷新测试尽量在独立全屏窗口中进行，后台标签页会限制动画。</span></li>
+      </ul>
+      <h3 data-i18n="tips.keysTitle">快捷键</h3>
+      <div class="keys keys-full" data-i18n-html="tips.keys"></div>
+      <div class="keys-touch" data-i18n="tips.touch">触屏：左右滑动切换测试 · 双击屏幕标记「正常」</div>
+    </div>
+  </div>
+</section>
+
+<script src="app.js"></script>
+</body>
+</html>

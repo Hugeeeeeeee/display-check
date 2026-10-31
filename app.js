@@ -1,0 +1,2845 @@
+(() => {
+  'use strict';
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const el = (tag, cls) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    return node;
+  };
+
+  const stage = $('#stage');
+  const layer = $('#layer');
+  const home = $('#home');
+  const hudIdx = $('#hudIdx');
+  const hudTitle = $('#hudTitle');
+  const hudSub = $('#hudSub');
+  const hudHint = $('#hudHint');
+  const hudControls = $('#hudControls');
+  const toastEl = $('#toast');
+  const btnPass = $('#btnPass');
+  const btnFail = $('#btnFail');
+  const btnFs = $('#btnFs');
+  const grid = $('#grid');
+  const progressLabel = $('#progressLabel');
+  const progressBar = $('#progressBar');
+  const startBtn = $('#startBtn');
+  const startLabel = $('#startLabel');
+  const reportBtn = $('#reportBtn');
+  const reportBadge = $('#reportBadge');
+  const countPass = $('#countPass');
+  const countFail = $('#countFail');
+  const countRest = $('#countRest');
+  const btnPrev = $('#btnPrev');
+  const btnNextIcon = $('#btnNextIcon');
+  const btnReport = $('#btnReport');
+  const btnNext = $('#btnNext');
+
+  const reportEl = $('#report');
+  const reportDate = $('#reportDate');
+  const reportVerdict = $('#reportVerdict');
+  const verdictIcon = $('#verdictIcon');
+  const verdictTitle = $('#verdictTitle');
+  const verdictSub = $('#verdictSub');
+  const reportPass = $('#reportPass');
+  const reportFail = $('#reportFail');
+  const reportRest = $('#reportRest');
+  const reportGrid = $('#reportGrid');
+  const reportMeta = $('#reportMeta');
+  const reportContinue = $('#reportContinue');
+  const tipsEl = $('#tips');
+  const btnMemo = $('#btnMemo');
+  const langSeg = $('#langSeg');
+  const hudLang = $('#hudLang');
+  const reportLang = $('#reportLang');
+  const starLink = $('#starLink');
+  const starBar = $('#starBar');
+  const starBarLink = $('#starBarLink');
+  const starBarClose = $('#starBarClose');
+  const reportPromo = $('#reportPromo');
+  const resetBtnEl = $('#resetBtn');
+  const reportResetEl = $('#reportReset');
+
+  const STORE_KEY = 'displaycheck.progress.v1';
+  const LANG_KEY = 'displaycheck.lang.v1';
+  const STAR_KEY = 'displaycheck.starHinted.v1';
+  const TOTAL = 10;
+  let lastHz = 0;
+
+  /* ---------------- 仓库地址：部署前只需改这三行 ---------------- */
+  // 把你的 GitHub 路径填到 REPO 里（形如 用户名/仓库名，不要加 https://），
+  // 首页 Star 入口、报告说明条、文字摘要、备份 JSON、打印页脚会自动跟随。
+  // 保持占位符 YOUR_GITHUB_USERNAME 不动时，Star 入口与推广文案会自动隐藏，
+  // 不会出现指向不存在页面的链接。
+  const REPO = 'Hugeeeeeeee/display-check';
+  const GITHUB_URL = `https://github.com/${REPO}`;
+  const REPO_READY = REPO.indexOf('YOUR_GITHUB_USERNAME') < 0;
+
+  /* ---------------- 文案字典 ---------------- */
+  /* 新增语言：复制一份字典并在 STRINGS 里登记即可，渲染逻辑不需修改。
+     带 *-html 后缀语义的值包含 <kbd>/<span> 等标记，只用于 innerHTML 场景。 */
+  const ZH = {
+    'app.title': '显示器自检 · Display Check',
+    'app.desc': '10 项全屏显示器检测：坏点、色阶、灰阶、均匀性、漏光、锐度、拖影、刷新率、可视角度与伽马。本地运行，无需联网。',
+    'og.desc': '新显示器到手，用 10 项全屏测试确认坏点、拖影、刷新率与色彩表现。',
+    'tw.desc': '10 项全屏显示器检测，本地运行、无需联网、不上传任何数据。',
+
+    'lang.aria': '界面语言',
+    'lang.next': '切换语言 (L)',
+    'lang.name': '简体中文',
+    'lang.label': '中',
+    'lang.use': '切换到 {name}',
+    'lang.changed': '界面语言已切换为 {name}',
+
+    'star.link': 'GitHub',
+    'star.report': '觉得有用？欢迎在 GitHub 给个项目 Star',
+    'star.reportSub': '开源、完全本地运行、无统计；Star 只影响这个项目，不会收集你的任何信息。',
+    'star.close': '关闭提示',
+    'star.promoTail': '觉得有用欢迎点个 Star',
+    'star.summary': '开源项目：{repo} · 完全本地运行、无统计 · 觉得有用欢迎点个 Star',
+
+    'hero.eyebrow': 'DISPLAY CHECK',
+    'hero.title': '显示器<span class="accent">自检</span>',
+    'hero.lede': '新显示器到手，用 10 项全屏测试确认坏点、均匀性、拖影、刷新率与色彩。全程本地运行，无需联网。',
+    'hero.note': '本地运行 · 不上传任何数据 · 结果只保存在本机',
+
+    'btn.start': '开始完整检测',
+    'btn.continue': '继续检测 {done}/{total}',
+    'btn.viewReport': '查看检测报告',
+    'btn.report': '检测报告',
+    'btn.tips': '小抄 · 快捷键',
+    'btn.close': '关闭',
+    'btn.closeReport': '关闭报告',
+    'btn.closeEsc': '关闭 (Esc)',
+    'btn.copy': '复制文字摘要',
+    'btn.print': '打印 / 保存 PDF',
+    'btn.backup': '备份进度',
+    'btn.restore': '恢复进度',
+    'btn.home': '返回首页',
+    'btn.retest': '重新检测',
+    'btn.reset': '重置',
+    'btn.resetConfirm': '确认清除?',
+    'btn.nextArrow': '下一项 <span aria-hidden="true">→</span>',
+    'btn.reportArrow': '查看报告 <span aria-hidden="true">→</span>',
+    'btn.startArrow': '开始完整检测 <span aria-hidden="true">→</span>',
+    'btn.continueArrow': '继续检测 {rest} 项 <span aria-hidden="true">→</span>',
+
+    'aria.readout': '屏幕信息',
+    'aria.grid': '测试列表',
+    'aria.card': '{name}，{state}',
+
+    'stat.res': '分辨率',
+    'stat.hz': '刷新率',
+    'stat.dpr': '像素比',
+    'stat.gamut': '色域 / HDR',
+    'stat.measuring': '测量中…',
+    'stat.cssPixels': 'CSS 像素 {w} × {h}',
+
+    'sec.title': '检测项目',
+    'label.pass': '正常',
+    'label.fail': '异常',
+    'label.rest': '未测',
+    'label.failMarked': '有异常',
+    'label.note': '有备注',
+
+    'foot.keys': '<kbd>←</kbd><kbd>→</kbd> 切换测试 &nbsp;·&nbsp; <kbd>F</kbd> 全屏 &nbsp;·&nbsp; <kbd>P</kbd> 正常 &nbsp;·&nbsp; <kbd>X</kbd> 异常 &nbsp;·&nbsp; <kbd>R</kbd> 报告 &nbsp;·&nbsp; <kbd>Esc</kbd> 返回',
+    'foot.tip': '建议关闭系统缩放与夜间模式，使用原生分辨率；漏光与黑阶测试请在暗室进行。标记结果仅保存在本机浏览器。',
+
+    'hud.total': '/ 10',
+    'hud.prev': '上一项',
+    'hud.prevKey': '上一项 (←)',
+    'hud.next': '下一项',
+    'hud.nextKey': '下一项 (→)',
+    'hud.nextReportKey': '查看报告 (→)',
+    'hud.reportKey': '查看检测报告 (R)',
+    'hud.fs': '全屏',
+    'hud.fsExit': '退出全屏',
+    'hud.fsKey': '全屏 (F)',
+    'hud.fsKeyExit': '退出全屏 (F)',
+    'hud.close': '返回',
+    'hud.closeKey': '返回 (Esc)',
+    'hud.markPass': '✓ 正常',
+    'hud.markFail': '✕ 异常',
+    'hud.memo': '添加备注',
+    'hud.memoAdd': '添加备注 (M)',
+    'hud.memoEdit': '编辑备注 (M)',
+    'hud.testFallback': '测试',
+
+    'toast.unmarked': '已取消标记',
+    'toast.markedPass': '已标记：正常',
+    'toast.markedFail': '已标记：有异常',
+    'toast.lastDone': '最后一项已完成 · 正在生成检测报告',
+    'toast.guidedOn': '连续检测已开启 · 标记后自动进入下一项',
+    'toast.fsUnsupported': '当前浏览器不支持自动全屏，请按 F11 或使用菜单开启',
+    'toast.fsDenied': '无法自动全屏，请按 F11 或浏览器菜单开启',
+    'toast.memoSaved': '备注已保存',
+    'toast.memoCleared': '备注已清除',
+    'toast.copied': '文字摘要已复制，可直接粘贴发送',
+    'toast.copyFail': '复制失败，请使用打印 / 保存 PDF',
+    'toast.backedUp': '已导出备份 JSON，可在新设备用「恢复进度」导入',
+    'toast.restored': '已恢复 {n} 项标记结果',
+    'toast.restoreEmpty': '备份文件中没有可恢复的结果',
+    'toast.restoreBad': '无法读取该文件，请确认是本工具导出的备份 JSON',
+    'toast.resetDone': '检测进度已重置',
+    'toast.clearedRestart': '已清空结果，重新开始',
+    'toast.bgDark': '已切换为深色背景',
+    'toast.bgLight': '已切换为浅色背景',
+    'toast.paused': '已暂停',
+    'toast.resumed': '继续运动',
+    'toast.ditherOn': '已叠加 ±3 级抖动噪声',
+    'toast.ditherOff': '已关闭抖动',
+    'toast.gammaReset': '已重置为 186',
+
+    'prompt.memo': '「{name}」备注（留空清除）：',
+
+    'verdict.notStarted': '还没有开始检测',
+    'verdict.notStartedSub': '点击「开始完整检测」，按顺序完成 {total} 项测试。',
+    'verdict.remaining': '还有 {rest} 项未测',
+    'verdict.remainingSub': '已完成 {done} 项：{pass} 项正常，{fail} 项异常。完成全部项目后结论更可靠。',
+    'verdict.allPass': '全部 {total} 项通过',
+    'verdict.allPassSub': '未发现明显问题，这台显示器可以放心使用。',
+    'verdict.minorFail': '发现 {fail} 项轻微异常',
+    'verdict.minorFailSub': '建议重新确认一次，并对照具体项目判断是否需要退换。',
+    'verdict.badFail': '发现 {fail} 项异常',
+    'verdict.badFailSub': '建议在退换期内联系卖家，并附上本报告作为参考。',
+    'verdict.pendingSub': '完成检测后会在这里生成结论。',
+
+    'report.eyebrow': 'DISPLAY CHECK REPORT',
+    'report.title': '检测报告',
+    'report.foot': '结果基于人工目视观察，仅作为选购与退换参考，不代表实验室级测量。',
+    'report.screen': '屏幕 {w} × {h}',
+    'report.viewport': '视口 {w} × {h}',
+    'report.measuredHz': '实测 {hz} Hz',
+    'report.hzNone': '刷新率未测得',
+    'report.browser': '浏览器',
+    'report.summaryTitle': '显示器检测报告 · Display Check',
+    'report.summaryVerdict': '结论：{title}（{sub}）',
+    'report.summaryCounts': '正常 {pass} · 异常 {fail} · 未测 {rest}',
+    'report.summaryItems': '逐项结果：',
+    'report.summaryItem': '{idx} {name}：{state}',
+    'report.summaryNote': '（备注：{note}）',
+    'report.backupNote': '此文件由「显示器自检」导出，用于在新设备恢复检测进度与备注；导入入口：报告页「恢复进度」。',
+
+    'tips.aria': '判定小抄与快捷键',
+    'tips.title': '判定小抄 · 快捷键',
+    'tips.howTitle': '怎么判断结果',
+    'tips.adviceTitle': '测试建议',
+    'tips.keysTitle': '快捷键',
+    'tips.keys': '<kbd>←</kbd><kbd>→</kbd> 上 / 下一项 &nbsp;·&nbsp; <kbd>空格</kbd> 当前测试的切换动作 &nbsp;·&nbsp; <kbd>G</kbd> 网格 &nbsp;·&nbsp; <kbd>F</kbd> 全屏 &nbsp;·&nbsp; <kbd>P</kbd> 正常 &nbsp;·&nbsp; <kbd>X</kbd> 异常 &nbsp;·&nbsp; <kbd>M</kbd> 备注 &nbsp;·&nbsp; <kbd>R</kbd> 报告 &nbsp;·&nbsp; <kbd>L</kbd> 语言 &nbsp;·&nbsp; <kbd>T</kbd> / <kbd>?</kbd> 本面板 &nbsp;·&nbsp; <kbd>Esc</kbd> 返回 &nbsp;·&nbsp; <kbd>1</kbd>–<kbd>0</kbd> 首页直达测试',
+    'tips.touch': '触屏：左右滑动切换测试 · 双击屏幕标记「正常」',
+    'tips.short.env': '环境',
+    'tips.short.dark': '暗室',
+    'tips.short.full': '全屏',
+    'tips.env': '使用原生分辨率、系统缩放 100%；关闭夜间模式 / 护眼 / HDR 与厂商色彩增强。',
+    'tips.dark': '坏点、漏光、灰阶建议在暗室进行，并让屏幕预热 20–30 分钟。',
+    'tips.full': '响应与刷新测试尽量在独立全屏窗口中进行，后台标签页会限制动画。',
+
+    'test.pixels.name': '坏点与纯色',
+    'test.pixels.desc': '9 种纯色全屏，排查亮点、暗点与彩点',
+    'test.pixels.hint': '单击或按 <kbd>空格</kbd> 切换颜色 · 黑色找亮点，白色找暗点',
+    'test.banding.name': '色阶与渐变',
+    'test.banding.desc': '检查渐变是否平滑，有无色阶断层',
+    'test.banding.hint': '按 <kbd>空格</kbd> 切换通道 · 开「抖动」可排除浏览器插值假断层 · 只看面板上真实存在的竖条纹',
+    'test.grayscale.name': '灰阶细节',
+    'test.grayscale.desc': '黑阶 0–10 与白阶 245–255 的还原',
+    'test.grayscale.hint': '在暗室中观察 · 黑阶 0–10 应能分辨到 2–3 级，白阶应有可见层次',
+    'test.uniformity.name': '亮度均匀性',
+    'test.uniformity.desc': '全屏底色，观察四角偏色与暗角',
+    'test.uniformity.hint': '单击或按 <kbd>空格</kbd> 切换底色 · <kbd>G</kbd> 显示网格 · 观察四角与中心是否一致',
+    'test.bleed.name': '漏光与黑位',
+    'test.bleed.desc': '关灯看黑场，检查背光漏光与光晕',
+    'test.bleed.hint': '关灯后观察屏幕四角与边缘 · 轻微漏光属正常，明显光晕或泛白可考虑退换',
+    'test.sharpness.name': '锐度与像素',
+    'test.sharpness.desc': '1:1 像素棋盘、细线与小字号文字',
+    'test.sharpness.hint': '按 <kbd>空格</kbd> 切换黑/白底 · 系统缩放会破坏 1:1 像素，建议使用原生分辨率',
+    'test.response.name': '响应与拖影',
+    'test.response.desc': '高速运动条纹，观察拖影与过冲',
+    'test.response.hint': '拖动滑块改变速度 · <kbd>空格</kbd> 暂停 · 观察运动边缘是否出现拖影、白边或黑边',
+    'test.refresh.name': '刷新与帧同步',
+    'test.refresh.desc': '实测刷新率，检查运动是否均匀',
+    'test.refresh.hint': '观察竖条移动是否匀速、有无跳格 · <kbd>空格</kbd> 暂停 · 顶部实时显示实测刷新率',
+    'test.viewing.name': '可视角度',
+    'test.viewing.desc': '侧视四角色块，观察偏色与泛白',
+    'test.viewing.hint': '记住正面的颜色，再从左/右/上/下侧视 · 颜色与亮度不应明显发白或偏色',
+    'test.gamma.name': '伽马校准',
+    'test.gamma.desc': '棋盘格对比纯灰，估算 γ 值',
+    'test.gamma.hint': '拖动滑块直至左右两侧亮度一致 · <kbd>空格</kbd> 重置为 186 · 桌面显示器通常在 γ 2.2 附近',
+
+    'tips.short.pixels': '坏点',
+    'tips.short.banding': '色阶',
+    'tips.short.grayscale': '灰阶',
+    'tips.short.uniformity': '均匀性',
+    'tips.short.bleed': '漏光',
+    'tips.short.sharpness': '锐度',
+    'tips.short.response': '拖影',
+    'tips.short.refresh': '刷新',
+    'tips.short.viewing': '视角',
+    'tips.short.gamma': '伽马',
+    'tips.pixels': '纯色下出现常亮白点、彩点或不亮的黑点即为坏点 / 亮点。',
+    'tips.banding': '渐变出现明显竖条纹说明色深或伽马处理不佳；开抖动后仍断层才可疑。',
+    'tips.grayscale': '黑阶能分辨到 2–3 级、白阶 245–255 有层次即可。',
+    'tips.uniformity': '四角与中心不应有明显暗角或偏色；轻微差异属正常。',
+    'tips.bleed': 'IPS 轻微角落漏光正常，大面积光晕或泛白可考虑退换。',
+    'tips.sharpness': '1:1 棋盘格不应出现摩尔纹；文字不应发虚或出现明显彩边。',
+    'tips.response': '运动条纹边缘不应有长拖尾、白边或黑边（过冲）。',
+    'tips.refresh': '实测 Hz 应接近标称值，竖条移动应匀速无跳格。',
+    'tips.viewing': '侧视时颜色不应明显泛白、偏色或丢失细节。',
+    'tips.gamma': '滑块在 186 附近两侧亮度一致，说明 γ 接近 2.2。',
+
+    'color.white': '白色',
+    'color.black': '黑色',
+    'color.red': '红色',
+    'color.green': '绿色',
+    'color.blue': '蓝色',
+    'color.cyan': '青色',
+    'color.magenta': '品红',
+    'color.yellow': '黄色',
+    'color.gray': '中灰',
+    'color.dimGray': '暗灰',
+
+    'mode.gray': '灰阶 0–100%',
+    'mode.shadow': '暗部 0–32',
+    'mode.highlight': '亮部 223–255',
+    'mode.red': '红色通道',
+    'mode.green': '绿色通道',
+    'mode.blue': '蓝色通道',
+
+    'ctl.grayMode': '渐变模式',
+    'ctl.dither': '抖动',
+    'ctl.ditherTitle': '在渐变上叠加 ±3 级随机噪声（近似面板自身的时序抖动），用于排除浏览器 8bit 插值造成的假性断层',
+    'ctl.grid': '网格 G',
+    'ctl.speed': '速度',
+    'ctl.pause': '暂停 空格',
+    'ctl.resume': '继续 空格',
+    'ctl.pauseTitle': '暂停/继续 (空格)',
+    'ctl.bgLight': '背景：亮',
+    'ctl.bgDark': '背景：暗',
+    'ctl.bgTitle': '切换黑/白背景 (空格)',
+    'ctl.pureGray': '纯灰',
+    'ctl.gammaReset': '重置 186',
+    'ctl.gammaResetTitle': '重置为 186 (空格)',
+
+    'sub.color': '{name} {hex} · {i}/{n}',
+    'sub.mode': '{name} · {i}/{n}',
+    'sub.modeDither': '{name} · {i}/{n} · 抖动',
+    'sub.grayRamp': '黑阶 0–10 · 白阶 245–255 · 暗室观察',
+    'sub.pureBlack': '纯黑 · 暗室观察',
+    'sub.pixelSharp': '1:1 像素棋盘与文字渲染',
+    'sub.speeding': '{speed} px/s · 测速中…',
+    'sub.speedFps': '{speed} px/s · {fps} FPS',
+    'sub.measuring': '测速中…',
+    'sub.refreshHz': '{hz} Hz · {ms} ms',
+    'sub.viewing': '侧视检查 · 色彩与亮度稳定性',
+    'sub.gammaChecker': '棋盘格 50% 线性 ↔ 纯灰 {v}',
+
+    'canvas.paused': ' · 已暂停',
+    'canvas.fpsInfo': '{fps} FPS · {speed} px/s',
+    'canvas.frameInfo': '帧间隔 {ms} ms · 异常帧 {drops}',
+    'canvas.dash': '—',
+
+    'gray.blackTitle': '黑阶 · BLACK LEVEL 0–10',
+    'gray.whiteTitle': '白阶 · WHITE CLIPPING 245–255',
+    'gray.note': '看不到 0 是正常的；能分辨到 2–3 级说明暗部表现良好。',
+
+    'sharp.c1': '1 设备像素',
+    'sharp.c2': '2 设备像素',
+    'sharp.linesV': '1px 竖线 / 3px 间距',
+    'sharp.linesH': '1px 横线 / 3px 间距',
+    'sharp.zhLabel': '中文小字 · 9–18px',
+    'sharp.latinLabel': 'Latin · 10–18px',
+    'sharp.weightLabel': '正文与字重',
+    'sharp.zhSample': '永和九年，岁在癸丑，暮春之初',
+    'sharp.latinSample': 'The quick brown fox jumps over 0123456789',
+    'sharp.edgeNote': '锋利的文字边缘不应出现明显彩边或灰影。',
+    'sharp.brand': '显示器自检 2026',
+    'sharp.moire': '若棋盘格出现摩尔纹或色斑，可能是缩放或锐化过度。',
+    'sharp.meta': 'DPR {dpr} · 视口 {w} × {h}'
+  };
+
+  const EN = {
+    'app.title': 'Display Check · Monitor Self-Test',
+    'app.desc': '10 full-screen display tests: dead pixels, gradients, grayscale levels, uniformity, backlight bleed, sharpness, motion clarity, refresh rate, viewing angles and gamma. Runs locally, no network needed.',
+    'og.desc': 'Got a new monitor? Check dead pixels, ghosting, refresh rate and colour with 10 full-screen tests.',
+    'tw.desc': '10 full-screen display tests. Runs locally, no network, nothing uploaded.',
+
+    'lang.aria': 'Interface language',
+    'lang.next': 'Change language (L)',
+    'lang.name': 'English',
+    'lang.label': 'EN',
+    'lang.use': 'Switch to {name}',
+    'lang.changed': 'Interface language: {name}',
+
+    'star.link': 'GitHub',
+    'star.report': 'Found this useful? A star on GitHub would help',
+    'star.reportSub': 'Open source, fully local, no analytics. Starring only helps this project — it collects nothing about you.',
+    'star.close': 'Dismiss',
+    'star.promoTail': 'If it helps, a star is welcome',
+    'star.summary': 'Open source: {repo} · fully local, no analytics · a star is welcome if it helps',
+
+    'hero.eyebrow': 'DISPLAY CHECK',
+    'hero.title': 'Monitor <span class="accent">Self-Check</span>',
+    'hero.lede': 'Got a new display? Ten full-screen tests for dead pixels, uniformity, motion clarity, refresh rate and colour. Everything runs on your machine — no connection needed.',
+    'hero.note': 'Runs locally · nothing is uploaded · results stay on this device',
+
+    'btn.start': 'Run all tests',
+    'btn.continue': 'Continue {done}/{total}',
+    'btn.viewReport': 'View report',
+    'btn.report': 'Report',
+    'btn.tips': 'Cheat sheet · shortcuts',
+    'btn.close': 'Close',
+    'btn.closeReport': 'Close report',
+    'btn.closeEsc': 'Close (Esc)',
+    'btn.copy': 'Copy text summary',
+    'btn.print': 'Print / save as PDF',
+    'btn.backup': 'Export progress',
+    'btn.restore': 'Import progress',
+    'btn.home': 'Back to start',
+    'btn.retest': 'Start over',
+    'btn.reset': 'Reset',
+    'btn.resetConfirm': 'Confirm reset?',
+    'btn.nextArrow': 'Next <span aria-hidden="true">→</span>',
+    'btn.reportArrow': 'Report <span aria-hidden="true">→</span>',
+    'btn.startArrow': 'Run all tests <span aria-hidden="true">→</span>',
+    'btn.continueArrow': 'Continue with {rest} left <span aria-hidden="true">→</span>',
+
+    'aria.readout': 'Screen information',
+    'aria.grid': 'Test list',
+    'aria.card': '{name}, {state}',
+
+    'stat.res': 'Resolution',
+    'stat.hz': 'Refresh rate',
+    'stat.dpr': 'Pixel ratio',
+    'stat.gamut': 'Gamut / HDR',
+    'stat.measuring': 'Measuring…',
+    'stat.cssPixels': 'CSS pixels {w} × {h}',
+
+    'sec.title': 'Tests',
+    'label.pass': 'Pass',
+    'label.fail': 'Issue',
+    'label.rest': 'Unseen',
+    'label.failMarked': 'Issue found',
+    'label.note': 'Note',
+
+    'foot.keys': '<kbd>←</kbd><kbd>→</kbd> switch test &nbsp;·&nbsp; <kbd>F</kbd> fullscreen &nbsp;·&nbsp; <kbd>P</kbd> pass &nbsp;·&nbsp; <kbd>X</kbd> issue &nbsp;·&nbsp; <kbd>R</kbd> report &nbsp;·&nbsp; <kbd>Esc</kbd> back',
+    'foot.tip': 'Turn off display scaling and night mode and use the panel’s native resolution. Do the bleed and black-level tests in a dark room. Your marks are stored only in this browser.',
+
+    'hud.total': '/ 10',
+    'hud.prev': 'Previous test',
+    'hud.prevKey': 'Previous (←)',
+    'hud.next': 'Next test',
+    'hud.nextKey': 'Next (→)',
+    'hud.nextReportKey': 'Report (→)',
+    'hud.reportKey': 'Open report (R)',
+    'hud.fs': 'Fullscreen',
+    'hud.fsExit': 'Exit fullscreen',
+    'hud.fsKey': 'Fullscreen (F)',
+    'hud.fsKeyExit': 'Exit fullscreen (F)',
+    'hud.close': 'Back',
+    'hud.closeKey': 'Back (Esc)',
+    'hud.markPass': '✓ Pass',
+    'hud.markFail': '✕ Issue',
+    'hud.memo': 'Add note',
+    'hud.memoAdd': 'Add note (M)',
+    'hud.memoEdit': 'Edit note (M)',
+    'hud.testFallback': 'Test',
+
+    'toast.unmarked': 'Mark removed',
+    'toast.markedPass': 'Marked: pass',
+    'toast.markedFail': 'Marked: issue found',
+    'toast.lastDone': 'Last test done · building your report',
+    'toast.guidedOn': 'Guided mode · marking advances to the next test',
+    'toast.fsUnsupported': 'This browser cannot enter fullscreen automatically — press F11 or use the menu',
+    'toast.fsDenied': 'Automatic fullscreen was blocked — press F11 or use the browser menu',
+    'toast.memoSaved': 'Note saved',
+    'toast.memoCleared': 'Note cleared',
+    'toast.copied': 'Summary copied — ready to paste',
+    'toast.copyFail': 'Copy failed — use Print / save as PDF instead',
+    'toast.backedUp': 'Backup JSON exported — import it with “Import progress” on another device',
+    'toast.restored': '{n} marks restored',
+    'toast.restoreEmpty': 'No restorable results in that file',
+    'toast.restoreBad': 'Could not read that file — make sure it is a backup JSON exported by this tool',
+    'toast.resetDone': 'Progress reset',
+    'toast.clearedRestart': 'Results cleared — starting over',
+    'toast.bgDark': 'Dark background',
+    'toast.bgLight': 'Light background',
+    'toast.paused': 'Paused',
+    'toast.resumed': 'Motion resumed',
+    'toast.ditherOn': '±3 level dither noise added',
+    'toast.ditherOff': 'Dither off',
+    'toast.gammaReset': 'Reset to 186',
+
+    'prompt.memo': 'Note for “{name}” (leave empty to clear):',
+
+    'verdict.notStarted': 'No tests yet',
+    'verdict.notStartedSub': 'Press “Run all tests” to work through all {total} tests in order.',
+    'verdict.remaining': '{rest} tests still to go',
+    'verdict.remainingSub': '{done} done: {pass} pass, {fail} with issues. Finish everything for a trustworthy verdict.',
+    'verdict.allPass': 'All {total} tests passed',
+    'verdict.allPassSub': 'Nothing obvious found — this display is good to use.',
+    'verdict.minorFail': '{fail} minor issues found',
+    'verdict.minorFailSub': 'Look at those tests once more and judge whether they warrant a return.',
+    'verdict.badFail': '{fail} issues found',
+    'verdict.badFailSub': 'Contact the seller within the return window and attach this report.',
+    'verdict.pendingSub': 'Your verdict will appear here once the tests are done.',
+
+    'report.eyebrow': 'DISPLAY CHECK REPORT',
+    'report.title': 'Inspection report',
+    'report.foot': 'Based on visual inspection by eye. A buying / return reference, not a lab measurement.',
+    'report.screen': 'Screen {w} × {h}',
+    'report.viewport': 'Viewport {w} × {h}',
+    'report.measuredHz': 'measured {hz} Hz',
+    'report.hzNone': 'refresh rate not measured',
+    'report.browser': 'Browser',
+    'report.summaryTitle': 'Display Check report',
+    'report.summaryVerdict': 'Verdict: {title} ({sub})',
+    'report.summaryCounts': 'Pass {pass} · Issues {fail} · Unseen {rest}',
+    'report.summaryItems': 'Per test:',
+    'report.summaryItem': '{idx} {name}: {state}',
+    'report.summaryNote': ' (note: {note})',
+    'report.backupNote': 'Exported by Display Check. Restores marks and notes on another device — use “Import progress” in the report.',
+
+    'tips.aria': 'Cheat sheet and shortcuts',
+    'tips.title': 'Cheat sheet · shortcuts',
+    'tips.howTitle': 'How to judge',
+    'tips.adviceTitle': 'Test conditions',
+    'tips.keysTitle': 'Shortcuts',
+    'tips.keys': '<kbd>←</kbd><kbd>→</kbd> previous / next &nbsp;·&nbsp; <kbd>Space</kbd> action of the current test &nbsp;·&nbsp; <kbd>G</kbd> grid &nbsp;·&nbsp; <kbd>F</kbd> fullscreen &nbsp;·&nbsp; <kbd>P</kbd> pass &nbsp;·&nbsp; <kbd>X</kbd> issue &nbsp;·&nbsp; <kbd>M</kbd> note &nbsp;·&nbsp; <kbd>R</kbd> report &nbsp;·&nbsp; <kbd>L</kbd> language &nbsp;·&nbsp; <kbd>T</kbd> / <kbd>?</kbd> this panel &nbsp;·&nbsp; <kbd>Esc</kbd> back &nbsp;·&nbsp; <kbd>1</kbd>–<kbd>0</kbd> jump to a test from the start page',
+    'tips.touch': 'Touch: swipe left / right to switch tests · double-tap to mark “Pass”',
+    'tips.short.env': 'Setup',
+    'tips.short.dark': 'Dark room',
+    'tips.short.full': 'Fullscreen',
+    'tips.env': 'Native resolution, 100% OS scaling; disable night mode / eye comfort, HDR and vendor “vivid” picture modes.',
+    'tips.dark': 'Do dead-pixel, bleed and grayscale tests in a dark room after the panel has been on for 20–30 minutes.',
+    'tips.full': 'Run the motion and refresh tests in their own fullscreen window — background tabs throttle animation.',
+
+    'test.pixels.name': 'Dead pixels & solids',
+    'test.pixels.desc': 'Nine full-screen solid colours to reveal bright, dark and coloured subpixels',
+    'test.pixels.hint': 'Click or press <kbd>Space</kbd> to change colour · look for bright dots on black, dark dots on white',
+    'test.banding.name': 'Gradients & banding',
+    'test.banding.desc': 'Smooth ramps or visible tonal bands',
+    'test.banding.hint': 'Press <kbd>Space</kbd> to change channel · turn on “Dither” to rule out fake bands created by browser interpolation · judge only bands that stay visible',
+    'test.grayscale.name': 'Grayscale detail',
+    'test.grayscale.desc': 'Black level 0–10 and white level 245–255',
+    'test.grayscale.hint': 'Watch in a dark room · you should separate black levels down to 2–3, and the white end should show steps',
+    'test.uniformity.name': 'Brightness uniformity',
+    'test.uniformity.desc': 'Full-screen fields to spot corner tint and dark corners',
+    'test.uniformity.hint': 'Click or press <kbd>Space</kbd> to change field · <kbd>G</kbd> for a grid · compare corners with the centre',
+    'test.bleed.name': 'Backlight bleed',
+    'test.bleed.desc': 'Pure black to check glow and bleeding from the edges',
+    'test.bleed.hint': 'With the lights off, watch the corners and edges · slight bleed is normal, strong glow or washed-out black is worth a return',
+    'test.sharpness.name': 'Sharpness & pixel mapping',
+    'test.sharpness.desc': '1:1 checkerboard, hairlines and small text',
+    'test.sharpness.hint': 'Press <kbd>Space</kbd> to flip black / white background · OS scaling breaks 1:1 pixel mapping — use native resolution',
+    'test.response.name': 'Motion clarity',
+    'test.response.desc': 'Fast-moving bars to check trailing and overshoot',
+    'test.response.hint': 'Drag the slider to change speed · <kbd>Space</kbd> pauses · watch the edges of moving bars for smearing, white or black overshoot',
+    'test.refresh.name': 'Refresh rate & frame pacing',
+    'test.refresh.desc': 'Measured hz and whether motion is evenly paced',
+    'test.refresh.hint': 'Check that the bar glides evenly without stutter · <kbd>Space</kbd> pauses · the measured refresh rate shows at the top',
+    'test.viewing.name': 'Viewing angles',
+    'test.viewing.desc': 'Four colour blocks to check shift when seen off-axis',
+    'test.viewing.hint': 'Remember the on-axis colours, then look from left / right / above / below · hue and brightness should not wash out',
+    'test.gamma.name': 'Gamma calibration',
+    'test.gamma.desc': 'Checkerbox against flat grey to estimate γ',
+    'test.gamma.hint': 'Drag the slider until both halves match in brightness · <kbd>Space</kbd> resets to 186 · desktop monitors usually sit near γ 2.2',
+
+    'tips.short.pixels': 'Dead pixels',
+    'tips.short.banding': 'Banding',
+    'tips.short.grayscale': 'Grayscale',
+    'tips.short.uniformity': 'Uniformity',
+    'tips.short.bleed': 'Bleed',
+    'tips.short.sharpness': 'Sharpness',
+    'tips.short.response': 'Ghosting',
+    'tips.short.refresh': 'Refresh',
+    'tips.short.viewing': 'Angles',
+    'tips.short.gamma': 'Gamma',
+    'tips.pixels': 'A dot that stays lit, coloured or black on a solid field is a stuck or dead subpixel.',
+    'tips.banding': 'Visible steps in a ramp point at poor bit depth or gamma handling; bands that survive dithering are the real ones.',
+    'tips.grayscale': 'Black steps distinguishable down to 2–3 and visible separation from 245 to 255 is fine.',
+    'tips.uniformity': 'Corners should match the centre in brightness and tint; slight deviation is normal.',
+    'tips.bleed': 'Slight corner bleed on IPS is normal; broad glow or milky blacks are a return case.',
+    'tips.sharpness': 'A 1:1 checkerboard should show no moiré; text should not blur or carry coloured fringes.',
+    'tips.response': 'Moving edges should not trail, and show no white or black overshoot.',
+    'tips.refresh': 'Measured hz should be close to the rated value, with smooth, evenly paced motion.',
+    'tips.viewing': 'Off-axis the image should not go grey, shift hue or lose detail.',
+    'tips.gamma': 'If both halves match around slider 186, γ is close to 2.2.',
+
+    'color.white': 'White',
+    'color.black': 'Black',
+    'color.red': 'Red',
+    'color.green': 'Green',
+    'color.blue': 'Blue',
+    'color.cyan': 'Cyan',
+    'color.magenta': 'Magenta',
+    'color.yellow': 'Yellow',
+    'color.gray': 'Mid grey',
+    'color.dimGray': 'Dim grey',
+
+    'mode.gray': 'Grey 0–100%',
+    'mode.shadow': 'Shadows 0–32',
+    'mode.highlight': 'Highlights 223–255',
+    'mode.red': 'Red channel',
+    'mode.green': 'Green channel',
+    'mode.blue': 'Blue channel',
+
+    'ctl.grayMode': 'Ramp mode',
+    'ctl.dither': 'Dither',
+    'ctl.ditherTitle': 'Adds ±3 levels of random noise to the ramp (closer to a panel’s own temporal dithering) to separate real banding from 8-bit browser interpolation',
+    'ctl.grid': 'Grid G',
+    'ctl.speed': 'Speed',
+    'ctl.pause': 'Pause Space',
+    'ctl.resume': 'Resume Space',
+    'ctl.pauseTitle': 'Pause / resume (Space)',
+    'ctl.bgLight': 'BG: light',
+    'ctl.bgDark': 'BG: dark',
+    'ctl.bgTitle': 'Flip black / white background (Space)',
+    'ctl.pureGray': 'Flat grey',
+    'ctl.gammaReset': 'Reset 186',
+    'ctl.gammaResetTitle': 'Reset to 186 (Space)',
+
+    'sub.color': '{name} {hex} · {i}/{n}',
+    'sub.mode': '{name} · {i}/{n}',
+    'sub.modeDither': '{name} · {i}/{n} · dither',
+    'sub.grayRamp': 'Black 0–10 · white 245–255 · dark room',
+    'sub.pureBlack': 'Pure black · dark room',
+    'sub.pixelSharp': '1:1 checkerboard and text rendering',
+    'sub.speeding': '{speed} px/s · measuring…',
+    'sub.speedFps': '{speed} px/s · {fps} FPS',
+    'sub.measuring': 'Measuring…',
+    'sub.refreshHz': '{hz} Hz · {ms} ms',
+    'sub.viewing': 'Off-axis check · colour and brightness stability',
+    'sub.gammaChecker': 'Checkerboard 50% linear ↔ flat grey {v}',
+
+    'canvas.paused': ' · paused',
+    'canvas.fpsInfo': '{fps} FPS · {speed} px/s',
+    'canvas.frameInfo': 'Frame time {ms} ms · dropped {drops}',
+    'canvas.dash': '—',
+
+    'gray.blackTitle': 'BLACK LEVEL 0–10',
+    'gray.whiteTitle': 'WHITE CLIPPING 245–255',
+    'gray.note': 'Not seeing 0 is normal; separating down to level 2–3 means the shadows are handled well.',
+
+    'sharp.c1': '1 device pixel',
+    'sharp.c2': '2 device pixels',
+    'sharp.linesV': '1px vertical / 3px pitch',
+    'sharp.linesH': '1px horizontal / 3px pitch',
+    'sharp.zhLabel': 'CJK small text · 9–18px',
+    'sharp.latinLabel': 'Latin · 10–18px',
+    'sharp.weightLabel': 'Body text & weights',
+    'sharp.zhSample': '永和九年，岁在癸丑，暮春之初',
+    'sharp.latinSample': 'The quick brown fox jumps over 0123456789',
+    'sharp.edgeNote': 'Text edges should be crisp, without coloured fringes or grey halo.',
+    'sharp.brand': 'Display Check 2026',
+    'sharp.moire': 'Moiré or colour blotches in the checkerboard suggest scaling or over-sharpening.',
+    'sharp.meta': 'DPR {dpr} · viewport {w} × {h}'
+  };
+
+  const FALLBACK_LANG = 'zh-CN';
+  const STRINGS = { 'zh-CN': ZH, en: EN };
+  const MISSING = new Set();
+
+  function detectLang() {
+    let saved = '';
+    try { saved = localStorage.getItem(LANG_KEY) || ''; } catch (err) { /* file:// may block */ }
+    if (saved && STRINGS[saved]) return saved;
+    const nav = (navigator.language || '').toLowerCase();
+    return nav.indexOf('zh') === 0 ? 'zh-CN' : 'en';
+  }
+
+  let lang = detectLang();
+
+  function t(key, params) {
+    let out = STRINGS[lang] ? STRINGS[lang][key] : undefined;
+    if (out === undefined) out = STRINGS[FALLBACK_LANG][key];
+    if (out === undefined) {
+      MISSING.add(key);
+      return '???';
+    }
+    if (params) {
+      out = out.replace(/\{(\w+)\}/g, (m, name) => (params[name] === undefined ? m : String(params[name])));
+    }
+    return out;
+  }
+
+  /* 统一的状态 / 测试名访问器：新增语言只改字典，不改这里 */
+  const stateLabel = (st) => (st === 'pass' ? t('label.pass') : st === 'fail' ? t('label.fail') : t('label.rest'));
+  const testName = (id) => t(`test.${id}.name`);
+  const testDesc = (id) => t(`test.${id}.desc`);
+  const testHint = (id) => t(`test.${id}.hint`);
+  const colorName = (id) => t(`color.${id}`);
+
+  function applyI18n(root) {
+    const scope = root || document;
+    scope.querySelectorAll('[data-i18n]').forEach((node) => {
+      node.textContent = t(node.getAttribute('data-i18n'));
+    });
+    scope.querySelectorAll('[data-i18n-html]').forEach((node) => {
+      node.innerHTML = t(node.getAttribute('data-i18n-html'));
+    });
+    scope.querySelectorAll('[data-i18n-attr]').forEach((node) => {
+      node.getAttribute('data-i18n-attr').split(',').forEach((pair) => {
+        const idx = pair.indexOf(':');
+        if (idx < 1) return;
+        const attr = pair.slice(0, idx).trim();
+        const key = pair.slice(idx + 1).trim();
+        if (attr && key) node.setAttribute(attr, t(key));
+      });
+    });
+  }
+
+  const langOptions = () => Object.keys(STRINGS);
+  const langLabel = (code) => (STRINGS[code] && STRINGS[code]['lang.label']) || code;
+  const langName = (code) => (STRINGS[code] && STRINGS[code]['lang.name']) || code;
+  const nextLang = () => {
+    const list = langOptions();
+    return list[(list.indexOf(lang) + 1) % list.length];
+  };
+
+  function buildLangSeg() {
+    if (!langSeg) return;
+    langSeg.innerHTML = '';
+    langSeg.setAttribute('aria-label', t('lang.aria'));
+    langOptions().forEach((code) => {
+      const btn = el('button', 'seg-btn');
+      btn.type = 'button';
+      btn.textContent = langLabel(code);
+      btn.dataset.lang = code;
+      btn.setAttribute('aria-pressed', code === lang ? 'true' : 'false');
+      btn.title = t('lang.use', { name: langName(code) });
+      btn.addEventListener('click', () => setLang(code));
+      langSeg.append(btn);
+    });
+  }
+
+  function syncLangControls() {
+    if (langSeg) {
+      langSeg.querySelectorAll('.seg-btn').forEach((btn) => {
+        btn.setAttribute('aria-pressed', btn.dataset.lang === lang ? 'true' : 'false');
+      });
+    }
+    [hudLang, reportLang].forEach((btn) => {
+      if (!btn) return;
+      btn.textContent = langLabel(nextLang());
+      btn.title = t('lang.use', { name: langName(nextLang()) });
+      btn.setAttribute('aria-label', t('lang.next'));
+    });
+  }
+
+  function setLang(next, silent) {
+    if (!STRINGS[next] || next === lang) return;
+    lang = next;
+    try { localStorage.setItem(LANG_KEY, next); } catch (err) { /* file:// may block */ }
+    document.documentElement.lang = next;
+    applyI18n(document);
+    buildLangSeg();
+    syncLangControls();
+    if (resetBtnEl) resetBtnEl.textContent = resetTimer ? t('btn.resetConfirm') : t('btn.reset');
+    if (reportResetEl) reportResetEl.textContent = reportResetTimer ? t('btn.resetConfirm') : t('btn.retest');
+    relabelStats();
+    renderHome();
+    if (current >= 0) {
+      const id = tests[current].id;
+      hudTitle.textContent = testName(id);
+      hudHint.innerHTML = testHint(id);
+      syncMarks();
+      syncMemoBtn();
+      syncFsIcon();
+      if (active && typeof active.lang === 'function') {
+        try { active.lang(); } catch (err) { /* noop */ }
+      }
+    }
+    if (reportEl.classList.contains('on')) renderReport();
+    renderPromo();
+    if (!silent) showToast(t('lang.changed', { name: langName(next) }));
+  }
+
+  /* ---------------- 仓库入口与一次性引导 ---------------- */
+
+  function renderPromo() {
+    if (!reportPromo) return;
+    if (!REPO_READY) {
+      reportPromo.hidden = true;
+      reportPromo.innerHTML = '';
+      return;
+    }
+    reportPromo.hidden = false;
+    reportPromo.innerHTML = `${t('app.title')} · <a href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">${REPO}</a> · ${t('star.promoTail')}`;
+  }
+
+  function wireStar() {
+    if (starLink) {
+      starLink.hidden = !REPO_READY;
+      if (REPO_READY) starLink.href = GITHUB_URL;
+    }
+    if (starBarLink && REPO_READY) starBarLink.href = GITHUB_URL;
+    if (starBarClose) {
+      starBarClose.addEventListener('click', () => {
+        starBar.hidden = true;
+        try { localStorage.setItem(STAR_KEY, '1'); } catch (err) { /* file:// may block */ }
+        if (current >= 0) stage.focus({ preventScroll: true });
+        else $('#reportClose').focus();
+      });
+    }
+  }
+
+  /* 完成一整轮并打开报告时只提一次，不弹窗、不制造压力 */
+  function maybeShowStarHint(allDone) {
+    if (!starBar || !REPO_READY || allDone !== true) return;
+    let seen = '';
+    try { seen = localStorage.getItem(STAR_KEY) || ''; } catch (err) { /* file:// may block */ }
+    if (seen) {
+      starBar.hidden = true;
+      return;
+    }
+    starBar.hidden = false;
+    try { localStorage.setItem(STAR_KEY, '1'); } catch (err) { /* file:// may block */ }
+  }
+
+  /* ---------------- progress ---------------- */
+
+  let progress = {};
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) progress = JSON.parse(raw) || {};
+  } catch (err) { progress = {}; }
+
+  function saveProgress() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(progress)); } catch (err) { /* file:// may block */ }
+  }
+
+  function markValues() {
+    const out = [];
+    Object.keys(progress).forEach((k) => {
+      if (k !== 'notes') out.push(progress[k]);
+    });
+    return out;
+  }
+
+  function noteOf(id) {
+    return (progress.notes && progress.notes[id]) || '';
+  }
+
+  function setNote(id, text) {
+    const value = text.trim();
+    if (!progress.notes) progress.notes = {};
+    if (value) progress.notes[id] = value;
+    else delete progress.notes[id];
+    saveProgress();
+    syncMemoBtn();
+  }
+
+  function updateProgress() {
+    const vals = markValues();
+    const pass = vals.filter((v) => v === 'pass').length;
+    const fail = vals.filter((v) => v === 'fail').length;
+    const done = pass + fail;
+    const rest = Math.max(0, TOTAL - done);
+
+    if (progressLabel) progressLabel.textContent = `${done} / ${TOTAL}`;
+    if (progressBar) progressBar.style.width = `${(done / TOTAL) * 100}%`;
+    if (countPass) countPass.textContent = String(pass);
+    if (countFail) countFail.textContent = String(fail);
+    if (countRest) countRest.textContent = String(rest);
+    if (reportPass) reportPass.textContent = String(pass);
+    if (reportFail) reportFail.textContent = String(fail);
+    if (reportRest) reportRest.textContent = String(rest);
+
+    if (startLabel) {
+      startLabel.textContent = done === 0
+        ? t('btn.start')
+        : done >= TOTAL
+          ? t('btn.viewReport')
+          : t('btn.continue', { done, total: TOTAL });
+    }
+    if (reportBadge) {
+      reportBadge.hidden = done === 0;
+      reportBadge.textContent = String(done);
+    }
+  }
+
+  /* ---------------- thumbnails ---------------- */
+
+  function thumbSVG(kind) {
+    const open = '<svg viewBox="0 0 240 104" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">';
+
+    if (kind === 'pixels') {
+      return open + `
+        <rect width="240" height="104" fill="#08090d"/>
+        <g transform="translate(83 15)">
+          <rect width="34" height="34" rx="5" fill="#ff453a"/>
+          <rect x="39" width="34" height="34" rx="5" fill="#30d158"/>
+          <rect y="39" width="34" height="34" rx="5" fill="#0a84ff"/>
+          <rect x="39" y="39" width="34" height="34" rx="5" fill="#ffd60a"/>
+        </g>
+      </svg>`;
+    }
+
+    if (kind === 'banding') {
+      return open + `
+        <defs>
+          <linearGradient id="t-band" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#000"/>
+            <stop offset="1" stop-color="#fff"/>
+          </linearGradient>
+        </defs>
+        <rect width="240" height="104" fill="url(#t-band)"/>
+        <g fill="#fff" opacity=".12">
+          <rect x="59" width="1" height="104"/><rect x="119" width="1" height="104"/>
+          <rect x="179" width="1" height="104"/>
+        </g>
+      </svg>`;
+    }
+
+    if (kind === 'grayscale') {
+      let bars = '';
+      for (let i = 0; i < 11; i++) {
+        const v = Math.round(6 + i * 23);
+        bars += `<rect x="${26 + i * 17.4}" y="28" width="12" height="48" fill="rgb(${v},${v},${v})"/>`;
+      }
+      return open + `
+        <rect width="240" height="104" fill="#08090d"/>
+        ${bars}
+        <rect x="20" y="84" width="200" height="1" fill="#1c2030"/>
+      </svg>`;
+    }
+
+    if (kind === 'uniformity') {
+      return open + `
+        <defs>
+          <radialGradient id="t-vig" cx=".5" cy=".5" r=".72">
+            <stop offset=".52" stop-color="#000" stop-opacity="0"/>
+            <stop offset="1" stop-color="#000" stop-opacity=".3"/>
+          </radialGradient>
+        </defs>
+        <rect width="240" height="104" fill="#7e828c"/>
+        <g stroke="#000" stroke-opacity=".14">
+          <path d="M48 0v104M96 0v104M144 0v104M192 0v104M0 26h240M0 52h240M0 78h240"/>
+        </g>
+        <rect width="240" height="104" fill="url(#t-vig)"/>
+      </svg>`;
+    }
+
+    if (kind === 'bleed') {
+      return open + `
+        <defs>
+          <radialGradient id="t-glow" cx=".5" cy=".5" r=".5">
+            <stop offset="0" stop-color="#dfe6ff" stop-opacity=".2"/>
+            <stop offset="1" stop-color="#dfe6ff" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect width="240" height="104" fill="#030306"/>
+        <ellipse cx="4" cy="4" rx="58" ry="34" fill="url(#t-glow)" opacity=".8"/>
+        <ellipse cx="236" cy="100" rx="66" ry="38" fill="url(#t-glow)" opacity=".5"/>
+        <ellipse cx="120" cy="-10" rx="70" ry="26" fill="url(#t-glow)" opacity=".35"/>
+      </svg>`;
+    }
+
+    if (kind === 'sharpness') {
+      return open + `
+        <defs>
+          <pattern id="t-check" width="6" height="6" patternUnits="userSpaceOnUse">
+            <rect width="6" height="6" fill="#f7f8fa"/>
+            <rect width="3" height="3" fill="#12151b"/>
+            <rect x="3" y="3" width="3" height="3" fill="#12151b"/>
+          </pattern>
+        </defs>
+        <rect width="240" height="104" fill="#f2f4f8"/>
+        <rect x="18" y="20" width="102" height="64" rx="4" fill="url(#t-check)"/>
+        <g fill="#1a1e26">
+          <rect x="136" y="26" width="86" height="7" rx="3.5"/>
+          <rect x="136" y="41" width="64" height="4" rx="2"/>
+          <rect x="136" y="51" width="76" height="4" rx="2"/>
+          <rect x="136" y="61" width="50" height="4" rx="2"/>
+          <rect x="136" y="74" width="70" height="3" rx="1.5" opacity=".5"/>
+        </g>
+      </svg>`;
+    }
+
+    if (kind === 'response') {
+      return open + `
+        <rect width="240" height="104" fill="#06070b"/>
+        <g transform="skewX(-14)">
+          <g fill="#dfe6ff" opacity=".12">
+            <rect x="54" width="20" height="104"/><rect x="134" width="20" height="104"/>
+            <rect x="214" width="20" height="104"/>
+          </g>
+          <g fill="#e8eeff" opacity=".3">
+            <rect x="64" width="20" height="104"/><rect x="144" width="20" height="104"/>
+            <rect x="224" width="20" height="104"/>
+          </g>
+          <g fill="#f3f6ff">
+            <rect x="74" width="20" height="104"/><rect x="154" width="20" height="104"/>
+            <rect x="234" width="20" height="104"/>
+          </g>
+        </g>
+      </svg>`;
+    }
+
+    if (kind === 'refresh') {
+      let ticks = '';
+      for (let x = 18; x < 240; x += 20) {
+        const tall = x % 80 === 18;
+        ticks += `<path d="M${x} ${tall ? 76 : 82}v${tall ? 9 : 4}"/>`;
+      }
+      return open + `
+        <rect width="240" height="104" fill="#06070b"/>
+        <g stroke="#2a3350" stroke-width="1" fill="none">${ticks}</g>
+        <rect x="170" width="18" height="104" fill="#7c9cff" opacity=".16"/>
+        <rect x="177" width="4" height="104" fill="#b9c9ff"/>
+        <rect x="115" y="36" width="44" height="3" rx="1.5" fill="#27304a"/>
+      </svg>`;
+    }
+
+    if (kind === 'viewing') {
+      return open + `
+        <rect width="120" height="52" fill="#d9484d"/>
+        <rect x="120" width="120" height="52" fill="#2fbf71"/>
+        <rect y="52" width="120" height="52" fill="#3a7bd5"/>
+        <rect x="120" y="52" width="120" height="52" fill="#d9b04a"/>
+        <circle cx="120" cy="52" r="13" fill="#ffffff" fill-opacity=".2" stroke="#ffffff" stroke-opacity=".5"/>
+      </svg>`;
+    }
+
+    if (kind === 'gamma') {
+      return open + `
+        <defs>
+          <pattern id="t-gamma" width="4" height="4" patternUnits="userSpaceOnUse">
+            <rect width="4" height="4" fill="#fff"/>
+            <rect width="2" height="2" fill="#000"/>
+            <rect x="2" y="2" width="2" height="2" fill="#000"/>
+          </pattern>
+        </defs>
+        <rect width="240" height="104" fill="#0b0d12"/>
+        <rect x="26" y="20" width="88" height="64" rx="2" fill="url(#t-gamma)"/>
+        <rect x="126" y="20" width="88" height="64" rx="2" fill="#bababa"/>
+        <rect x="120" y="12" width="1" height="80" fill="#2b3145"/>
+      </svg>`;
+    }
+
+    return open + '<rect width="240" height="104" fill="#0b0d12"/></svg>';
+  }
+
+  /* ---------------- home ---------------- */
+
+  function renderHome() {
+    grid.innerHTML = tests.map((test, i) => {
+      const st = progress[test.id];
+      const stateClass = st === 'pass' ? ' is-pass' : st === 'fail' ? ' is-fail' : '';
+      const stateText = st ? stateLabel(st) : '';
+      const noteMark = noteOf(test.id) ? `<span class="nm" title="${t('label.note')}">✎</span>` : '';
+      const name = testName(test.id);
+      return `
+        <button type="button" class="card${stateClass}" data-idx="${i}" aria-label="${stateText ? t('aria.card', { name, state: stateText }) : name}">
+          <div class="thumb">
+            <span class="idx">${String(i + 1).padStart(2, '0')}</span>
+            <span class="st ${st || ''}">${stateText}</span>
+            ${thumbSVG(test.thumb)}
+          </div>
+          <div class="card-body">
+            <div class="card-title"><span>${name}${noteMark}</span><span class="arrow">→</span></div>
+            <div class="card-desc">${testDesc(test.id)}</div>
+          </div>
+        </button>`;
+    }).join('');
+    updateProgress();
+  }
+
+  let hzState = 'pending';
+
+  function relabelStats() {
+    const res = $('#statRes');
+    if (res) res.title = t('stat.cssPixels', { w: screen.width, h: screen.height });
+    const hz = $('#statHz');
+    if (hz && hzState !== 'measured' && !hz.querySelector('small')) {
+      hz.textContent = hzState === 'pending' ? t('stat.measuring') : t('canvas.dash');
+    }
+  }
+
+  function updateHomeStats() {
+    const dpr = window.devicePixelRatio || 1;
+    const res = $('#statRes');
+    const hz = $('#statHz');
+    const dprEl = $('#statDpr');
+    const gamutEl = $('#statGamut');
+
+    if (res) {
+      res.textContent = `${Math.round(screen.width * dpr)} × ${Math.round(screen.height * dpr)}`;
+      res.title = t('stat.cssPixels', { w: screen.width, h: screen.height });
+    }
+    if (dprEl) dprEl.innerHTML = `${dpr.toFixed(1)}× <small>DPR</small>`;
+
+    let gamut = 'sRGB';
+    if (window.matchMedia('(color-gamut: rec2020)').matches) gamut = 'Rec.2020';
+    else if (window.matchMedia('(color-gamut: p3)').matches) gamut = 'Display P3';
+    const hdr = window.matchMedia('(dynamic-range: high)').matches ? 'HDR' : 'SDR';
+    if (gamutEl) gamutEl.textContent = `${gamut} · ${hdr}`;
+
+    let settled = false;
+    hzState = 'pending';
+    clearTimeout(hzTimer);
+    hzTimer = setTimeout(() => {
+      if (!settled && hz) hz.textContent = t('stat.measuring');
+    }, 300);
+    const fallback = setTimeout(() => {
+      if (!settled && hz) {
+        hzState = 'na';
+        hz.textContent = t('canvas.dash');
+      }
+    }, 3200);
+
+    measureHz().then((value) => {
+      settled = true;
+      hzState = 'measured';
+      lastHz = value;
+      clearTimeout(fallback);
+      if (hz) hz.innerHTML = `${value.toFixed(0)} <small>Hz</small>`;
+    });
+  }
+
+  function measureHz(duration = 1200) {
+    return new Promise((resolve) => {
+      let frames = 0;
+      let start = 0;
+      function tick(now) {
+        if (!start) start = now;
+        frames++;
+        if (now - start >= duration) resolve((frames * 1000) / (now - start));
+        else requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+
+  /* ---------------- canvas helper ---------------- */
+
+  function fitCanvas(canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const w = Math.max(1, rect.width);
+    const h = Math.max(1, rect.height);
+    canvas.width = Math.max(1, Math.round(w * dpr));
+    canvas.height = Math.max(1, Math.round(h * dpr));
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, w, h, dpr };
+  }
+
+  /* ---------------- HUD helpers ---------------- */
+
+  let toastTimer = 0;
+  function showToast(text) {
+    toastEl.textContent = text;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1900);
+  }
+
+  let current = -1;
+  let active = {};
+  let idleTimer = 0;
+  let idleDelay = 2800;
+  let interacting = false;
+  let guided = false;
+  let advanceTimer = 0;
+
+  function wake() {
+    if (current < 0) return;
+    stage.classList.remove('idle');
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      if (!interacting) stage.classList.add('idle');
+    }, idleDelay);
+  }
+
+  function syncMarks() {
+    if (current < 0) return;
+    const st = progress[tests[current].id];
+    btnPass.classList.toggle('on', st === 'pass');
+    btnFail.classList.toggle('on', st === 'fail');
+    if (btnNext) {
+      const last = current >= tests.length - 1;
+      btnNext.innerHTML = last ? t('btn.reportArrow') : t('btn.nextArrow');
+      btnNext.title = last ? t('hud.reportKey') : t('hud.nextKey');
+    }
+    if (btnNextIcon) {
+      btnNextIcon.title = current >= tests.length - 1 ? t('hud.nextReportKey') : t('hud.nextKey');
+    }
+  }
+
+  function syncMemoBtn() {
+    if (!btnMemo) return;
+    const has = current >= 0 && Boolean(noteOf(tests[current].id));
+    btnMemo.classList.toggle('on', has);
+    btnMemo.title = has ? t('hud.memoEdit') : t('hud.memoAdd');
+  }
+
+  function editMemo() {
+    if (current < 0) return;
+    const id = tests[current].id;
+    const input = window.prompt(t('prompt.memo', { name: testName(id) }), noteOf(id));
+    if (input === null) return;
+    setNote(id, input);
+    renderHome();
+    showToast(input.trim() ? t('toast.memoSaved') : t('toast.memoCleared'));
+  }
+
+  function advance() {
+    if (current < 0) return;
+    if (current >= tests.length - 1) {
+      showToast(t('toast.lastDone'));
+      openReport();
+    }
+    else openTest(current + 1);
+  }
+
+  function mark(kind) {
+    if (current < 0) return;
+    clearTimeout(advanceTimer);
+    advanceTimer = 0;
+
+    const id = tests[current].id;
+    if (progress[id] === kind) delete progress[id];
+    else progress[id] = kind;
+    saveProgress();
+    syncMarks();
+    updateProgress();
+
+    if (!progress[id]) {
+      showToast(t('toast.unmarked'));
+      return;
+    }
+    showToast(progress[id] === 'pass' ? t('toast.markedPass') : t('toast.markedFail'));
+
+    if (guided) {
+      advanceTimer = setTimeout(() => {
+        advanceTimer = 0;
+        advance();
+      }, 480);
+    }
+  }
+
+  /* ---------------- open / close ---------------- */
+
+  function openTest(index) {
+    if (index < 0 || index >= tests.length) return;
+    if (tipsEl.classList.contains('on')) toggleTips(false);
+    clearTimeout(advanceTimer);
+    advanceTimer = 0;
+    if (current >= 0) teardown();
+
+    current = index;
+    const test = tests[index];
+
+    stage.classList.add('on');
+    stage.setAttribute('aria-hidden', 'false');
+    home.setAttribute('aria-hidden', 'true');
+    document.body.classList.add('locked');
+    stage.classList.remove('idle');
+    layer.innerHTML = '';
+    layer.style.background = '#000';
+    hudControls.innerHTML = '';
+    hudIdx.textContent = String(index + 1).padStart(2, '0');
+    hudTitle.textContent = testName(test.id);
+    hudSub.textContent = '';
+    hudHint.innerHTML = testHint(test.id);
+    idleDelay = test.idle || 2800;
+
+    active = {};
+    syncMarks();
+    syncMemoBtn();
+
+    const api = {
+      root: layer,
+      bg: (color) => { layer.style.background = color; },
+      sub: (text) => { hudSub.textContent = text; },
+      hint: (html) => { hudHint.innerHTML = html; },
+      controls: (node) => {
+        hudControls.innerHTML = '';
+        if (node) hudControls.append(node);
+      },
+      toast: showToast,
+      mark: mark
+    };
+
+    try {
+      const result = test.mount(api);
+      if (result) active = Object.assign(active, result);
+    } catch (err) {
+      console.error(err);
+    }
+
+    try { history.replaceState(null, '', `#${test.id}`); } catch (err) { /* file:// */ }
+    stage.tabIndex = -1;
+    stage.focus({ preventScroll: true });
+    wake();
+    if (!document.fullscreenElement) requestFullscreen(!hasUserGesture());
+  }
+
+  function hasUserGesture() {
+    if (navigator.userActivation) return navigator.userActivation.isActive;
+    return gestureRecent;
+  }
+
+  let gestureRecent = false;
+  let gestureTimer = 0;
+  const markGesture = () => {
+    gestureRecent = true;
+    clearTimeout(gestureTimer);
+    gestureTimer = setTimeout(() => { gestureRecent = false; }, 2000);
+  };
+  document.addEventListener('pointerdown', markGesture, { capture: true, passive: true });
+  document.addEventListener('keydown', markGesture, { capture: true });
+
+  function teardown() {
+    clearTimeout(advanceTimer);
+    advanceTimer = 0;
+    if (typeof active.cleanup === 'function') {
+      try { active.cleanup(); } catch (err) { /* noop */ }
+    }
+    active = {};
+    layer.innerHTML = '';
+    hudControls.innerHTML = '';
+    hudSub.textContent = '';
+  }
+
+  function closeTest() {
+    if (current < 0) return;
+    teardown();
+    if (document.activeElement && document.activeElement !== document.body
+      && !stage.contains(document.activeElement)) document.activeElement.blur();
+    current = -1;
+    guided = false;
+    stage.classList.remove('on', 'idle');
+    stage.setAttribute('aria-hidden', 'true');
+    home.removeAttribute('aria-hidden');
+    document.body.classList.remove('locked');
+    renderHome();
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (err) { /* file:// */ }
+    updateHomeStats();
+  }
+
+  function navigate(dir) {
+    if (current < 0) return;
+    if (dir > 0 && current >= tests.length - 1) {
+      openReport();
+      return;
+    }
+    const next = (current + dir + tests.length) % tests.length;
+    openTest(next);
+  }
+
+  function requestFullscreen(silent) {
+    if (document.fullscreenElement) {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      return;
+    }
+    if (!document.documentElement.requestFullscreen) {
+      if (!silent) showToast(t('toast.fsUnsupported'));
+      return;
+    }
+    let promise;
+    try {
+      promise = document.documentElement.requestFullscreen();
+    } catch (err) {
+      if (!silent) showToast(t('toast.fsDenied'));
+      return;
+    }
+    if (promise && promise.catch) {
+      promise.catch(() => {
+        if (!silent) showToast(t('toast.fsDenied'));
+      });
+    }
+  }
+
+  function syncFsIcon() {
+    if (!btnFs) return;
+    const on = Boolean(document.fullscreenElement);
+    btnFs.classList.toggle('on', on);
+    btnFs.title = on ? t('hud.fsKeyExit') : t('hud.fsKey');
+    btnFs.setAttribute('aria-label', on ? t('hud.fsExit') : t('hud.fs'));
+    btnFs.innerHTML = on
+      ? '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 4v5H4M15 20v-5h5M15 4v5h5M9 20v-5H4"/></svg>'
+      : '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 9V4h5M20 15v5h-5M20 9V4h-5M4 15v5h5"/></svg>';
+  }
+
+  /* ---------------- report ---------------- */
+
+  function firstUntested() {
+    return tests.findIndex((test) => !progress[test.id]);
+  }
+
+  function startFlow() {
+    const idx = firstUntested();
+    if (idx < 0) {
+      openReport();
+      return;
+    }
+    closeReport();
+    guided = true;
+    openTest(idx);
+    showToast(t('toast.guidedOn'));
+  }
+
+  function renderReport() {
+    const vals = markValues();
+    const pass = vals.filter((v) => v === 'pass').length;
+    const fail = vals.filter((v) => v === 'fail').length;
+    const rest = Math.max(0, TOTAL - pass - fail);
+
+    if (reportDate) {
+      reportDate.textContent = new Intl.DateTimeFormat(lang, {
+        year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      }).format(new Date());
+    }
+
+    if (reportVerdict) {
+      const allDone = pass + fail >= TOTAL;
+      reportVerdict.classList.remove('ok', 'warn', 'bad');
+      if (rest === TOTAL) {
+        reportVerdict.classList.add('warn');
+        verdictIcon.textContent = '–';
+        verdictTitle.textContent = t('verdict.notStarted');
+        verdictSub.textContent = t('verdict.notStartedSub', { total: TOTAL });
+      } else if (rest > 0) {
+        reportVerdict.classList.add('warn');
+        verdictIcon.textContent = '…';
+        verdictTitle.textContent = t('verdict.remaining', { rest });
+        verdictSub.textContent = t('verdict.remainingSub', { done: TOTAL - rest, pass, fail, rest });
+      } else if (fail === 0) {
+        reportVerdict.classList.add('ok');
+        verdictIcon.textContent = '✓';
+        verdictTitle.textContent = t('verdict.allPass', { total: TOTAL });
+        verdictSub.textContent = t('verdict.allPassSub');
+      } else if (fail <= 2) {
+        reportVerdict.classList.add('warn');
+        verdictIcon.textContent = '!';
+        verdictTitle.textContent = t('verdict.minorFail', { fail });
+        verdictSub.textContent = t('verdict.minorFailSub');
+      } else {
+        reportVerdict.classList.add('bad');
+        verdictIcon.textContent = '✕';
+        verdictTitle.textContent = t('verdict.badFail', { fail });
+        verdictSub.textContent = t('verdict.badFailSub');
+      }
+      maybeShowStarHint(allDone);
+    }
+
+    if (reportGrid) {
+      reportGrid.innerHTML = tests.map((test, i) => {
+        const st = progress[test.id];
+        const cls = st === 'pass' ? ' pass' : st === 'fail' ? ' fail' : '';
+        const state = stateLabel(st);
+        const note = noteOf(test.id);
+        return `
+          <button type="button" class="report-item${cls}" data-idx="${i}">
+            <span class="idx">${String(i + 1).padStart(2, '0')}</span>
+            <span class="name">${testName(test.id)}</span>
+            <span class="state">${state}</span>
+            ${note ? `<span class="note">✎ ${note}</span>` : ''}
+          </button>`;
+      }).join('');
+    }
+
+    if (reportMeta) reportMeta.textContent = reportMetaLines().join('  ·  ');
+
+    if (reportContinue) {
+      const done = pass + fail;
+      reportContinue.hidden = rest === 0;
+      reportContinue.innerHTML = done === 0
+        ? t('btn.startArrow')
+        : t('btn.continueArrow', { rest });
+    }
+  }
+
+  function reportMetaLines() {
+    const dpr = window.devicePixelRatio || 1;
+    let gamut = 'sRGB';
+    if (window.matchMedia('(color-gamut: rec2020)').matches) gamut = 'Rec.2020';
+    else if (window.matchMedia('(color-gamut: p3)').matches) gamut = 'Display P3';
+    const hdr = window.matchMedia('(dynamic-range: high)').matches ? 'HDR' : 'SDR';
+    const hzText = lastHz ? t('report.measuredHz', { hz: lastHz.toFixed(0) }) : t('report.hzNone');
+    const browser = navigator.userAgent.includes('Edg/') ? 'Edge'
+      : navigator.userAgent.includes('Chrome/') ? 'Chrome'
+        : navigator.userAgent.includes('Safari/') ? 'Safari'
+          : navigator.userAgent.includes('Firefox/') ? 'Firefox' : t('report.browser');
+    return [
+      t('report.screen', { w: Math.round(screen.width * dpr), h: Math.round(screen.height * dpr) }),
+      t('report.viewport', { w: window.innerWidth, h: window.innerHeight }),
+      `DPR ${dpr.toFixed(2)}`,
+      hzText,
+      `${gamut} · ${hdr}`,
+      browser
+    ];
+  }
+
+  function reportSummaryText() {
+    const lines = reportMetaLines();
+    const head = [
+      t('report.summaryTitle'),
+      reportDate.textContent,
+      '',
+      t('report.summaryVerdict', { title: verdictTitle.textContent, sub: verdictSub.textContent }),
+      t('report.summaryCounts', { pass: reportPass.textContent, fail: reportFail.textContent, rest: reportRest.textContent }),
+      '',
+      t('report.summaryItems')
+    ];
+    tests.forEach((test, i) => {
+      const st = progress[test.id];
+      const note = noteOf(test.id);
+      head.push(t('report.summaryItem', {
+        idx: String(i + 1).padStart(2, '0'),
+        name: testName(test.id),
+        state: stateLabel(st)
+      }) + (note ? t('report.summaryNote', { note }) : ''));
+    });
+    if (REPO_READY) head.push(t('star.summary', { repo: GITHUB_URL }));
+    head.push('', ...lines);
+    return head.join('\n');
+  }
+
+  function copySummary() {
+    const text = reportSummaryText();
+    const legacy = () => {
+      const ta = el('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.append(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (err) { /* noop */ }
+      ta.remove();
+      showToast(ok ? t('toast.copied') : t('toast.copyFail'));
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        () => showToast(t('toast.copied')),
+        legacy
+      );
+    } else {
+      legacy();
+    }
+  }
+
+  function downloadBackup() {
+    const payload = {
+      app: 'displaycheck',
+      version: 1,
+      language: lang,
+      exportedAt: new Date().toISOString(),
+      note: t('report.backupNote'),
+      repo: REPO_READY ? GITHUB_URL : undefined,
+      meta: reportMetaLines().join(' · '),
+      progress
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const a = el('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `displaycheck-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    showToast(t('toast.backedUp'));
+  }
+
+  function importBackup(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(String(reader.result));
+        const p = data && data.progress;
+        if (!p || typeof p !== 'object') throw new Error('bad');
+        let n = 0;
+        tests.forEach((test) => {
+          if (p[test.id] === 'pass' || p[test.id] === 'fail') {
+            progress[test.id] = p[test.id];
+            n++;
+          }
+        });
+        if (p.notes && typeof p.notes === 'object') {
+          progress.notes = Object.assign(progress.notes || {}, p.notes);
+        }
+        saveProgress();
+        renderHome();
+        renderReport();
+        if (current >= 0) { syncMarks(); syncMemoBtn(); }
+        showToast(n ? t('toast.restored', { n }) : t('toast.restoreEmpty'));
+      } catch (err) {
+        showToast(t('toast.restoreBad'));
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  /* ---------------- tips overlay ---------------- */
+
+  function toggleTips(force) {
+    const on = typeof force === 'boolean' ? force : !tipsEl.classList.contains('on');
+    tipsEl.classList.toggle('on', on);
+    tipsEl.setAttribute('aria-hidden', on ? 'false' : 'true');
+    if (on) {
+      $('#tipsClose').focus();
+      return;
+    }
+    if (current >= 0) stage.focus({ preventScroll: true });
+    else if (reportEl.classList.contains('on')) $('#reportClose').focus();
+    else $('#tipsBtn').focus();
+  }
+
+  function openReport() {
+    clearTimeout(advanceTimer);
+    advanceTimer = 0;
+    renderReport();
+    reportEl.classList.add('on');
+    reportEl.setAttribute('aria-hidden', 'false');
+    home.setAttribute('aria-hidden', 'true');
+    if (current >= 0) stage.setAttribute('aria-hidden', 'true');
+    document.body.classList.add('locked');
+    reportEl.scrollTop = 0;
+    try { history.replaceState(null, '', '#report'); } catch (err) { /* file:// */ }
+  }
+
+  function closeReport() {
+    if (!reportEl.classList.contains('on')) return;
+    reportEl.classList.remove('on');
+    reportEl.setAttribute('aria-hidden', 'true');
+    if (current < 0) {
+      document.body.classList.remove('locked');
+      home.removeAttribute('aria-hidden');
+    } else {
+      stage.setAttribute('aria-hidden', 'false');
+    }
+    clearTimeout(reportResetTimer);
+    reportResetTimer = 0;
+    if (reportResetEl) reportResetEl.textContent = t('btn.retest');
+    try {
+      history.replaceState(null, '', location.pathname + location.search + (current >= 0 ? `#${tests[current].id}` : ''));
+    } catch (err) { /* file:// */ }
+  }
+
+  /* ---------------- events ---------------- */
+
+  grid.addEventListener('click', (e) => {
+    const card = e.target.closest('.card');
+    if (!card) return;
+    guided = false;
+    openTest(Number(card.dataset.idx));
+  });
+
+  startBtn.addEventListener('click', () => {
+    if (firstUntested() < 0) openReport();
+    else startFlow();
+  });
+
+  reportBtn.addEventListener('click', openReport);
+
+  btnPass.addEventListener('click', () => mark('pass'));
+  btnFail.addEventListener('click', () => mark('fail'));
+  btnMemo.addEventListener('click', editMemo);
+  btnPrev.addEventListener('click', () => navigate(-1));
+  btnNextIcon.addEventListener('click', () => navigate(1));
+  btnNext.addEventListener('click', () => navigate(1));
+  btnReport.addEventListener('click', openReport);
+  btnFs.addEventListener('click', () => requestFullscreen(false));
+  $('#btnClose').addEventListener('click', closeTest);
+
+  let resetTimer = 0;
+  let reportResetTimer = 0;
+
+  function resetAll() {
+    progress = {};
+    saveProgress();
+    renderHome();
+  }
+
+  $('#resetBtn').addEventListener('click', () => {
+    const btn = $('#resetBtn');
+    if (!resetTimer) {
+      btn.textContent = t('btn.resetConfirm');
+      resetTimer = setTimeout(() => {
+        resetTimer = 0;
+        btn.textContent = t('btn.reset');
+      }, 3000);
+      return;
+    }
+    clearTimeout(resetTimer);
+    resetTimer = 0;
+    btn.textContent = t('btn.reset');
+    resetAll();
+    showToast(t('toast.resetDone'));
+  });
+
+  $('#reportClose').addEventListener('click', closeReport);
+  $('#reportHome').addEventListener('click', () => {
+    closeReport();
+    if (current >= 0) closeTest();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  reportContinue.addEventListener('click', () => {
+    if (firstUntested() >= 0) {
+      startFlow();
+    } else {
+      closeReport();
+      if (current >= 0) closeTest();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
+  $('#reportPrint').addEventListener('click', () => window.print());
+  $('#reportCopy').addEventListener('click', copySummary);
+  $('#backupBtn').addEventListener('click', downloadBackup);
+  const restoreInput = $('#restoreInput');
+  $('#restoreBtn').addEventListener('click', () => restoreInput.click());
+  restoreInput.addEventListener('change', () => {
+    if (restoreInput.files && restoreInput.files[0]) importBackup(restoreInput.files[0]);
+    restoreInput.value = '';
+  });
+
+  $('#tipsBtn').addEventListener('click', () => toggleTips());
+  $('#tipsClose').addEventListener('click', () => toggleTips(false));
+  tipsEl.addEventListener('click', (e) => {
+    if (!e.target.closest('.tips-card')) toggleTips(false);
+  });
+  $('#reportReset').addEventListener('click', () => {
+    const btn = $('#reportReset');
+    if (!reportResetTimer) {
+      btn.textContent = t('btn.resetConfirm');
+      reportResetTimer = setTimeout(() => {
+        reportResetTimer = 0;
+        btn.textContent = t('btn.retest');
+      }, 3000);
+      return;
+    }
+    clearTimeout(reportResetTimer);
+    reportResetTimer = 0;
+    btn.textContent = t('btn.retest');
+    resetAll();
+    closeReport();
+    if (current >= 0) closeTest();
+    guided = true;
+    openTest(0);
+    showToast(t('toast.clearedRestart'));
+  });
+
+  reportGrid.addEventListener('click', (e) => {
+    const item = e.target.closest('.report-item');
+    if (!item) return;
+    const idx = Number(item.dataset.idx);
+    closeReport();
+    guided = false;
+    openTest(idx);
+  });
+
+  document.addEventListener('fullscreenchange', syncFsIcon);
+
+  window.addEventListener('hashchange', () => {
+    const id = location.hash.replace('#', '');
+    if (id === 'report') {
+      if (!reportEl.classList.contains('on')) openReport();
+      return;
+    }
+    if (!id) {
+      if (reportEl.classList.contains('on')) closeReport();
+      if (current >= 0) closeTest();
+      return;
+    }
+    const idx = tests.findIndex((test) => test.id === id);
+    if (idx >= 0 && idx !== current) {
+      if (reportEl.classList.contains('on')) closeReport();
+      guided = false;
+      openTest(idx);
+    }
+  });
+
+  document.addEventListener('pointermove', () => wake(), { passive: true });
+  document.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.hud')) interacting = true;
+    wake();
+  });
+  document.addEventListener('pointerup', () => {
+    interacting = false;
+    wake();
+  });
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.hud button');
+    if (btn) btn.blur();
+  });
+
+  /* 触屏：左右滑动切换测试，双击屏幕标记正常（与空格动作兼容） */
+  let swipeX = 0;
+  let swipeY = 0;
+  let swipeT = 0;
+  let lastTapT = 0;
+
+  layer.addEventListener('touchstart', (e) => {
+    if (current < 0 || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    swipeX = t.clientX;
+    swipeY = t.clientY;
+    swipeT = Date.now();
+  }, { passive: true });
+
+  layer.addEventListener('touchend', (e) => {
+    if (current < 0 || e.changedTouches.length !== 1) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - swipeX;
+    const dy = t.clientY - swipeY;
+    const dt = Date.now() - swipeT;
+    if (dt < 900 && Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.6) {
+      e.preventDefault();
+      navigate(dx < 0 ? 1 : -1);
+      return;
+    }
+    if (Math.abs(dx) < 12 && Math.abs(dy) < 12 && dt < 350) {
+      const now = Date.now();
+      if (now - lastTapT < 340) {
+        lastTapT = 0;
+        mark('pass');
+      } else {
+        lastTapT = now;
+      }
+    }
+  }, { passive: false });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    if (reportEl.classList.contains('on')) {
+      if (tipsEl.classList.contains('on') && (e.key === 'Escape' || e.key === 't' || e.key === 'T' || e.key === '?')) {
+        e.preventDefault();
+        toggleTips(false);
+        return;
+      }
+      if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        setLang(nextLang());
+      } else if (e.key === 'Escape') {
+        if (document.fullscreenElement) return;
+        e.preventDefault();
+        closeReport();
+      } else if (e.key === 'r' || e.key === 'R') {
+        closeReport();
+      } else if (e.key === 't' || e.key === 'T' || e.key === '?' || e.key === 'F1') {
+        toggleTips();
+      }
+      return;
+    }
+
+    if (current < 0) {
+      const isDigit = (e.key >= '1' && e.key <= '9') || e.key === '0';
+      if (tipsEl.classList.contains('on')) {
+        if (isDigit) toggleTips(false);
+        else {
+          if (e.key === 'Escape' || e.key === 't' || e.key === 'T' || e.key === '?') {
+            e.preventDefault();
+            toggleTips(false);
+          } else if (e.key === 'l' || e.key === 'L') {
+            e.preventDefault();
+            setLang(nextLang());
+          }
+          return;
+        }
+      }
+      if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        setLang(nextLang());
+        return;
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        openReport();
+        return;
+      }
+      if (e.key === 't' || e.key === 'T' || e.key === '?' || e.key === 'F1') {
+        e.preventDefault();
+        toggleTips();
+        return;
+      }
+      if (e.key >= '1' && e.key <= '9') {
+        guided = false;
+        openTest(Number(e.key) - 1);
+      } else if (e.key === '0') {
+        guided = false;
+        openTest(9);
+      }
+      return;
+    }
+
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    const inField = tag === 'INPUT' || tag === 'TEXTAREA';
+
+    if (e.key === 'Escape') {
+      if (tipsEl.classList.contains('on')) {
+        e.preventDefault();
+        toggleTips(false);
+        return;
+      }
+      if (inField) document.activeElement.blur();
+      if (!document.fullscreenElement) {
+        e.preventDefault();
+        closeTest();
+      }
+      return;
+    }
+
+    if (inField && e.key.indexOf('Arrow') === 0) return;
+    wake();
+
+    switch (e.key) {
+      case 'ArrowLeft':
+        e.preventDefault();
+        navigate(-1);
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        navigate(1);
+        break;
+      case 'f':
+      case 'F':
+        requestFullscreen(false);
+        break;
+      case 'p':
+      case 'P':
+        mark('pass');
+        break;
+      case 'x':
+      case 'X':
+        mark('fail');
+        break;
+      case 'm':
+      case 'M':
+        editMemo();
+        break;
+      case 'l':
+      case 'L':
+        setLang(nextLang());
+        break;
+      case 't':
+      case 'T':
+      case '?':
+      case 'F1':
+        toggleTips();
+        break;
+      case 'r':
+      case 'R':
+        openReport();
+        break;
+      case ' ':
+        if (document.activeElement && document.activeElement.closest('.hud')) break;
+        e.preventDefault();
+        if (typeof active.action === 'function') active.action();
+        break;
+      case 'g':
+      case 'G':
+        if (typeof active.grid === 'function') {
+          e.preventDefault();
+          active.grid();
+        }
+        break;
+      default:
+        if (typeof active.onKey === 'function') active.onKey(e);
+    }
+  });
+
+  let statsTimer = 0;
+  let hzTimer = 0;
+  window.addEventListener('resize', () => {
+    if (current >= 0) {
+      wake();
+      return;
+    }
+    clearTimeout(statsTimer);
+    statsTimer = setTimeout(updateHomeStats, 350);
+  });
+
+  /* ================= tests ================= */
+
+  const tests = [
+    {
+      id: 'pixels',
+      thumb: 'pixels',
+      mount(api) {
+        const colors = [
+          { key: 'white', hex: '#ffffff' },
+          { key: 'black', hex: '#000000' },
+          { key: 'red', hex: '#ff0000' },
+          { key: 'green', hex: '#00ff00' },
+          { key: 'blue', hex: '#0000ff' },
+          { key: 'cyan', hex: '#00ffff' },
+          { key: 'magenta', hex: '#ff00ff' },
+          { key: 'yellow', hex: '#ffff00' },
+          { key: 'gray', hex: '#808080' }
+        ];
+        let i = 0;
+        const chips = [];
+
+        const chipLabel = (color) => `${colorName(color.key)} ${color.hex.toUpperCase()}`;
+
+        const apply = () => {
+          const color = colors[i];
+          api.bg(color.hex);
+          api.sub(t('sub.color', { name: colorName(color.key), hex: color.hex.toUpperCase(), i: i + 1, n: colors.length }));
+          chips.forEach((chip, idx) => chip.classList.toggle('on', idx === i));
+        };
+        const next = () => {
+          i = (i + 1) % colors.length;
+          apply();
+        };
+
+        const group = el('div', 'ctl-group');
+        const row = el('div', 'color-row');
+        colors.forEach((color, idx) => {
+          const chip = el('button', 'color-chip');
+          chip.type = 'button';
+          chip.style.background = color.hex;
+          chip.title = chipLabel(color);
+          chip.setAttribute('aria-label', chipLabel(color));
+          chip.addEventListener('click', () => {
+            i = idx;
+            apply();
+          });
+          chips.push(chip);
+          row.append(chip);
+        });
+        group.append(row);
+        api.controls(group);
+
+        apply();
+        api.root.addEventListener('click', next);
+
+        return {
+          action: next,
+          lang() {
+            chips.forEach((chip, idx) => {
+              chip.title = chipLabel(colors[idx]);
+              chip.setAttribute('aria-label', chipLabel(colors[idx]));
+            });
+            apply();
+          },
+          cleanup() { api.root.removeEventListener('click', next); }
+        };
+      }
+    },
+
+    {
+      id: 'banding',
+      thumb: 'banding',
+      mount(api) {
+        const canvas = el('canvas', 'fill-canvas');
+        api.root.append(canvas);
+
+        const modes = [
+          { key: 'gray', from: 0, to: 255 },
+          { key: 'shadow', from: 0, to: 32 },
+          { key: 'highlight', from: 223, to: 255 },
+          { key: 'red', from: 0, to: 255, ch: 'r' },
+          { key: 'green', from: 0, to: 255, ch: 'g' },
+          { key: 'blue', from: 0, to: 255, ch: 'b' }
+        ];
+        let i = 0;
+        let dither = false;
+        let offsets = null;
+
+        const modeName = (mode) => t(`mode.${mode.key}`);
+
+        const group = el('div', 'ctl-group');
+        const select = el('select', 'hud-select');
+        select.title = t('ctl.grayMode');
+        select.setAttribute('aria-label', t('ctl.grayMode'));
+        modes.forEach((mode, idx) => {
+          const opt = document.createElement('option');
+          opt.value = String(idx);
+          opt.textContent = modeName(mode);
+          select.append(opt);
+        });
+        select.addEventListener('change', () => {
+          i = Number(select.value);
+          draw();
+        });
+        group.append(select);
+
+        const ditherBtn = el('button', 'ctl-btn');
+        ditherBtn.type = 'button';
+        ditherBtn.textContent = t('ctl.dither');
+        ditherBtn.title = t('ctl.ditherTitle');
+        ditherBtn.addEventListener('click', () => {
+          dither = !dither;
+          ditherBtn.classList.toggle('on', dither);
+          draw();
+          api.toast(dither ? t('toast.ditherOn') : t('toast.ditherOff'));
+        });
+        group.append(ditherBtn);
+        api.controls(group);
+
+        const draw = () => {
+          const { ctx, w, h } = fitCanvas(canvas);
+          const mode = modes[i];
+          const grad = ctx.createLinearGradient(0, 0, w, 0);
+
+          const colorAt = (t) => {
+            if (mode.ch) {
+              const v = Math.round(t * 255);
+              return `rgb(${mode.ch === 'r' ? v : 0},${mode.ch === 'g' ? v : 0},${mode.ch === 'b' ? v : 0})`;
+            }
+            const v = Math.round(mode.from + (mode.to - mode.from) * t);
+            return `rgb(${v},${v},${v})`;
+          };
+
+          grad.addColorStop(0, colorAt(0));
+          grad.addColorStop(1, colorAt(1));
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, w, h);
+
+          if (dither && canvas.width >= 2 && canvas.height >= 2) {
+            if (!offsets) {
+              offsets = new Int8Array(8192);
+              for (let p = 0; p < offsets.length; p++) offsets[p] = Math.round((Math.random() - .5) * 7);
+            }
+            const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const d = img.data;
+            for (let p = 0, k = 0; p < d.length; p += 4, k++) {
+              const o = offsets[k & 8191];
+              d[p] = Math.min(255, Math.max(0, d[p] + o));
+              d[p + 1] = Math.min(255, Math.max(0, d[p + 1] + o));
+              d[p + 2] = Math.min(255, Math.max(0, d[p + 2] + o));
+            }
+            ctx.putImageData(img, 0, 0);
+          }
+
+          select.value = String(i);
+          api.sub(dither
+            ? t('sub.modeDither', { name: modeName(mode), i: i + 1, n: modes.length })
+            : t('sub.mode', { name: modeName(mode), i: i + 1, n: modes.length }));
+        };
+
+        const action = () => {
+          i = (i + 1) % modes.length;
+          draw();
+        };
+        const onResize = () => { offsets = null; draw(); };
+
+        draw();
+        window.addEventListener('resize', onResize);
+
+        return {
+          action,
+          lang() {
+            select.title = t('ctl.grayMode');
+            select.setAttribute('aria-label', t('ctl.grayMode'));
+            select.querySelectorAll('option').forEach((opt, idx) => {
+              opt.textContent = modeName(modes[idx]);
+            });
+            ditherBtn.textContent = t('ctl.dither');
+            ditherBtn.title = t('ctl.ditherTitle');
+            draw();
+          },
+          cleanup() { window.removeEventListener('resize', onResize); }
+        };
+      }
+    },
+
+    {
+      id: 'grayscale',
+      thumb: 'grayscale',
+      mount(api) {
+        const wrap = el('div', 'gray-wrap');
+
+        const buildRow = (title, values) => {
+          const cells = values.map((v) => `
+            <div class="swatch">
+              <i style="background: rgb(${v},${v},${v})"></i>
+              <span>${v}</span>
+            </div>`).join('');
+          return `<section class="gray-sec"><h3>${title}</h3><div class="swatches">${cells}</div></section>`;
+        };
+
+        const blacks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        const whites = [245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255];
+
+        const render = () => {
+          wrap.innerHTML =
+            buildRow(t('gray.blackTitle'), blacks) +
+            buildRow(t('gray.whiteTitle'), whites) +
+            `<p class="gray-note">${t('gray.note')}</p>`;
+          api.sub(t('sub.grayRamp'));
+        };
+
+        render();
+        api.root.append(wrap);
+        return { lang: render };
+      }
+    },
+
+    {
+      id: 'uniformity',
+      thumb: 'uniformity',
+      mount(api) {
+        const colors = [
+          { key: 'gray', hex: '#808080', dark: false },
+          { key: 'white', hex: '#ffffff', dark: false },
+          { key: 'red', hex: '#ff0000', dark: true },
+          { key: 'green', hex: '#00ff00', dark: false },
+          { key: 'blue', hex: '#0000ff', dark: true },
+          { key: 'dimGray', hex: '#1c1c1c', dark: true },
+          { key: 'black', hex: '#000000', dark: true }
+        ];
+        let i = 0;
+        let gridOn = false;
+
+        const chipLabel = (color) => `${colorName(color.key)} ${color.hex.toUpperCase()}`;
+
+        const wrap = el('div', 'uni-wrap');
+        const overlay = el('div', 'grid-overlay');
+        wrap.append(overlay);
+        api.root.append(wrap);
+
+        const chips = [];
+        const apply = () => {
+          const color = colors[i];
+          wrap.style.background = color.hex;
+          wrap.style.setProperty('--gc', color.dark ? 'rgba(255,255,255,.16)' : 'rgba(0,0,0,.2)');
+          api.sub(t('sub.color', { name: colorName(color.key), hex: color.hex.toUpperCase(), i: i + 1, n: colors.length }));
+          chips.forEach((chip, idx) => chip.classList.toggle('on', idx === i));
+        };
+
+        const next = () => {
+          i = (i + 1) % colors.length;
+          apply();
+        };
+
+        const toggleGrid = () => {
+          gridOn = !gridOn;
+          wrap.classList.toggle('show-grid', gridOn);
+          gridBtn.classList.toggle('on', gridOn);
+        };
+
+        const group = el('div', 'ctl-group');
+        const row = el('div', 'color-row');
+        colors.forEach((color, idx) => {
+          const chip = el('button', 'color-chip');
+          chip.type = 'button';
+          chip.style.background = color.hex;
+          chip.title = chipLabel(color);
+          chip.setAttribute('aria-label', chipLabel(color));
+          chip.addEventListener('click', () => {
+            i = idx;
+            apply();
+          });
+          chips.push(chip);
+          row.append(chip);
+        });
+        group.append(row);
+
+        const gridBtn = el('button', 'ctl-btn');
+        gridBtn.type = 'button';
+        gridBtn.textContent = t('ctl.grid');
+        gridBtn.addEventListener('click', toggleGrid);
+        group.append(gridBtn);
+        api.controls(group);
+
+        wrap.addEventListener('click', (e) => {
+          if (e.target.closest('.ctl-btn')) return;
+          next();
+        });
+
+        apply();
+
+        return {
+          action: next,
+          grid: toggleGrid,
+          lang() {
+            chips.forEach((chip, idx) => {
+              chip.title = chipLabel(colors[idx]);
+              chip.setAttribute('aria-label', chipLabel(colors[idx]));
+            });
+            gridBtn.textContent = t('ctl.grid');
+            apply();
+          },
+          cleanup() { api.root.innerHTML = ''; }
+        };
+      }
+    },
+
+    {
+      id: 'bleed',
+      thumb: 'bleed',
+      idle: 1500,
+      mount(api) {
+        api.bg('#000000');
+        api.sub(t('sub.pureBlack'));
+        return { lang() { api.sub(t('sub.pureBlack')); } };
+      }
+    },
+
+    {
+      id: 'sharpness',
+      thumb: 'sharpness',
+      mount(api) {
+        const wrap = el('div', 'sharp-wrap');
+
+        const drawChecker = (canvas, cell) => {
+          const rect = canvas.getBoundingClientRect();
+          const dpr = Math.min(window.devicePixelRatio || 1, 3);
+          const W = Math.max(1, Math.round(rect.width * dpr));
+          const H = Math.max(1, Math.round(rect.height * dpr));
+          if (canvas.width !== W) canvas.width = W;
+          if (canvas.height !== H) canvas.height = H;
+
+          const ctx = canvas.getContext('2d');
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, W, H);
+
+          const tile = document.createElement('canvas');
+          tile.width = cell * 2;
+          tile.height = cell * 2;
+          const tctx = tile.getContext('2d');
+          tctx.fillStyle = '#fff';
+          tctx.fillRect(0, 0, cell * 2, cell * 2);
+          tctx.fillStyle = '#000';
+          tctx.fillRect(0, 0, cell, cell);
+          tctx.fillRect(cell, cell, cell, cell);
+
+          ctx.fillStyle = ctx.createPattern(tile, 'repeat');
+          ctx.fillRect(0, 0, W, H);
+        };
+
+        const drawAll = () => {
+          wrap.querySelectorAll('canvas[data-cell]').forEach((canvas) => {
+            drawChecker(canvas, Number(canvas.dataset.cell));
+          });
+          const meta = wrap.querySelector('#sharpMeta');
+          if (meta) {
+            meta.textContent = t('sharp.meta', {
+              dpr: (window.devicePixelRatio || 1).toFixed(2),
+              w: window.innerWidth,
+              h: window.innerHeight
+            });
+          }
+        };
+
+        const render = () => {
+          wrap.innerHTML = `
+          <div class="sharp-grid">
+            <div class="sharp-cell">
+              <div class="preview"><canvas data-cell="1"></canvas></div>
+              <div class="cap"><span>${t('sharp.c1')}</span><span>CHECKER</span></div>
+            </div>
+            <div class="sharp-cell">
+              <div class="preview"><canvas data-cell="2"></canvas></div>
+              <div class="cap"><span>${t('sharp.c2')}</span><span>CHECKER</span></div>
+            </div>
+            <div class="sharp-cell">
+              <div class="preview"><div class="lines v"></div></div>
+              <div class="cap"><span>${t('sharp.linesV')}</span><span>LINES</span></div>
+            </div>
+            <div class="sharp-cell">
+              <div class="preview"><div class="lines h"></div></div>
+              <div class="cap"><span>${t('sharp.linesH')}</span><span>LINES</span></div>
+            </div>
+          </div>
+          <div class="text-grid">
+            <div class="text-col">
+              <h4>${t('sharp.zhLabel')}</h4>
+              ${[9, 10, 11, 12, 14, 18].map((s) => `<p style="font-size:${s}px">${t('sharp.zhSample')}</p>`).join('')}
+            </div>
+            <div class="text-col">
+              <h4>${t('sharp.latinLabel')}</h4>
+              ${[10, 11, 12, 13, 15, 18].map((s) => `<p style="font-size:${s}px">${t('sharp.latinSample')}</p>`).join('')}
+            </div>
+            <div class="text-col">
+              <h4>${t('sharp.weightLabel')}</h4>
+              <p style="font-size:13px">${t('sharp.edgeNote')}</p>
+              <p class="fine" style="font-size:12px; font-weight:400">Regular 400 · ${t('sharp.brand')}</p>
+              <p class="fine" style="font-size:12px; font-weight:600">Semibold 600 · ${t('sharp.brand')}</p>
+              <p class="fine" style="font-size:12px; font-weight:700">Bold 700 · ${t('sharp.brand')}</p>
+              <p class="fine" style="font-size:11px; letter-spacing:.18em">LETTERSPACING · 0.18EM</p>
+            </div>
+          </div>
+          <div class="sharp-foot">
+            <span>${t('sharp.moire')}</span>
+            <span id="sharpMeta">DPR —</span>
+          </div>
+        `;
+          api.sub(t('sub.pixelSharp'));
+          bgBtn.textContent = night ? t('ctl.bgDark') : t('ctl.bgLight');
+          bgBtn.title = t('ctl.bgTitle');
+          requestAnimationFrame(drawAll);
+        };
+
+        let night = false;
+        const bgBtn = el('button', 'ctl-btn');
+        bgBtn.type = 'button';
+        const toggleNight = () => {
+          night = !night;
+          wrap.classList.toggle('night', night);
+          bgBtn.classList.toggle('on', night);
+          bgBtn.textContent = night ? t('ctl.bgDark') : t('ctl.bgLight');
+          api.toast(night ? t('toast.bgDark') : t('toast.bgLight'));
+        };
+        bgBtn.addEventListener('click', toggleNight);
+        api.controls(bgBtn);
+
+        api.root.append(wrap);
+        render();
+
+        const onResize = () => drawAll();
+        window.addEventListener('resize', onResize);
+
+        return {
+          action: toggleNight,
+          lang: render,
+          cleanup() { window.removeEventListener('resize', onResize); }
+        };
+      }
+    },
+
+    {
+      id: 'response',
+      thumb: 'response',
+      mount(api) {
+        const canvas = el('canvas', 'fill-canvas');
+        api.root.append(canvas);
+
+        let ctx = null;
+        let w = 0;
+        let h = 0;
+        let speed = 480;
+        let offset = 0;
+        let paused = false;
+        let last = 0;
+        let raf = 0;
+        let fps = 0;
+        let frames = 0;
+        let fpsStart = 0;
+
+        const setup = () => {
+          const s = fitCanvas(canvas);
+          ctx = s.ctx;
+          w = s.w;
+          h = s.h;
+        };
+
+        const draw = () => {
+          if (!ctx) return;
+          ctx.fillStyle = '#050609';
+          ctx.fillRect(0, 0, w, h);
+
+          const period = 96;
+          const barW = 26;
+          for (let x = -period + (offset % period); x < w + period; x += period) {
+            ctx.fillStyle = '#f2f5ff';
+            ctx.fillRect(x, 0, barW, h);
+          }
+
+          const info = t('canvas.fpsInfo', {
+            fps: fps ? Math.round(fps) : t('canvas.dash'),
+            speed
+          }) + (paused ? t('canvas.paused') : '');
+          const panelW = 230;
+          const panelH = 26;
+          ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
+          ctx.fillStyle = 'rgba(6, 8, 13, .92)';
+          if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect((w - panelW) / 2, 10, panelW, panelH, 7);
+            ctx.fill();
+          } else {
+            ctx.fillRect((w - panelW) / 2, 10, panelW, panelH);
+          }
+          ctx.fillStyle = 'rgba(255,255,255,.56)';
+          ctx.textAlign = 'center';
+          ctx.fillText(info, w / 2, 27);
+          ctx.textAlign = 'left';
+        };
+
+        const loop = (now) => {
+          if (!last) last = now;
+          const dt = Math.min(80, now - last) / 1000;
+          last = now;
+
+          frames++;
+          if (!fpsStart) fpsStart = now;
+          if (now - fpsStart >= 500) {
+            fps = (frames * 1000) / (now - fpsStart);
+            frames = 0;
+            fpsStart = now;
+            api.sub(t('sub.speedFps', { speed, fps: Math.round(fps) }));
+          }
+
+          if (!paused) offset = (offset + speed * dt) % 960;
+          draw();
+          raf = requestAnimationFrame(loop);
+        };
+
+        const ctl = el('label', 'ctl');
+        const lab = el('span');
+        lab.textContent = t('ctl.speed');
+        const input = document.createElement('input');
+        input.type = 'range';
+        input.min = '80';
+        input.max = '1600';
+        input.step = '20';
+        input.value = String(speed);
+        const val = el('b');
+        val.textContent = String(speed);
+        input.addEventListener('input', () => {
+          speed = Number(input.value);
+          val.textContent = String(speed);
+        });
+        ctl.append(lab, input, val);
+
+        const pauseBtn = el('button', 'ctl-btn');
+        pauseBtn.type = 'button';
+        pauseBtn.textContent = t('ctl.pause');
+        pauseBtn.title = t('ctl.pauseTitle');
+        const togglePause = () => {
+          paused = !paused;
+          pauseBtn.classList.toggle('on', paused);
+          pauseBtn.textContent = paused ? t('ctl.resume') : t('ctl.pause');
+          api.toast(paused ? t('toast.paused') : t('toast.resumed'));
+        };
+        pauseBtn.addEventListener('click', togglePause);
+
+        const group = el('div', 'ctl-group');
+        group.append(ctl, pauseBtn);
+        api.controls(group);
+        api.sub(t('sub.speeding', { speed }));
+
+        setup();
+        const onResize = () => setup();
+        window.addEventListener('resize', onResize);
+        last = 0;
+        raf = requestAnimationFrame(loop);
+
+        return {
+          action: togglePause,
+          lang() {
+            lab.textContent = t('ctl.speed');
+            pauseBtn.textContent = paused ? t('ctl.resume') : t('ctl.pause');
+            pauseBtn.title = t('ctl.pauseTitle');
+            api.sub(fps
+              ? t('sub.speedFps', { speed, fps: Math.round(fps) })
+              : t('sub.speeding', { speed }));
+          },
+          cleanup() {
+            cancelAnimationFrame(raf);
+            window.removeEventListener('resize', onResize);
+          }
+        };
+      }
+    },
+
+    {
+      id: 'refresh',
+      thumb: 'refresh',
+      mount(api) {
+        const canvas = el('canvas', 'fill-canvas');
+        api.root.append(canvas);
+
+        let ctx = null;
+        let w = 0;
+        let h = 0;
+        let x = 0;
+        let raf = 0;
+        let paused = false;
+        let hz = 0;
+        let count = 0;
+        let winStart = 0;
+        let last = 0;
+        let drops = 0;
+
+        const setup = () => {
+          const s = fitCanvas(canvas);
+          ctx = s.ctx;
+          w = s.w;
+          h = s.h;
+        };
+
+        const draw = () => {
+          if (!ctx) return;
+          ctx.fillStyle = '#06070b';
+          ctx.fillRect(0, 0, w, h);
+
+          const railY = h - 34;
+          ctx.strokeStyle = 'rgba(255,255,255,.16)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          for (let tx = 20; tx < w; tx += 40) {
+            const tall = (tx - 20) % 200 === 0;
+            ctx.moveTo(tx + .5, railY + (tall ? 0 : 6));
+            ctx.lineTo(tx + .5, railY + 13);
+          }
+          ctx.stroke();
+
+          const barH = railY - 2;
+          ctx.fillStyle = 'rgba(124,156,255,.14)';
+          ctx.fillRect(x - 10, 0, 23, barH);
+          ctx.fillStyle = 'rgba(124,156,255,.3)';
+          ctx.fillRect(x - 4, 0, 11, barH);
+          ctx.fillStyle = '#c3d1ff';
+          ctx.fillRect(x, 0, 3, barH);
+
+          const panelW = 300;
+          const panelH = 62;
+          const panelX = (w - panelW) / 2;
+          ctx.fillStyle = 'rgba(6, 8, 13, .92)';
+          if (ctx.roundRect) {
+            ctx.beginPath();
+            ctx.roundRect(panelX, 10, panelW, panelH, 9);
+            ctx.fill();
+          } else {
+            ctx.fillRect(panelX, 10, panelW, panelH);
+          }
+
+          ctx.textAlign = 'center';
+          ctx.fillStyle = 'rgba(255,255,255,.86)';
+          ctx.font = '600 23px ui-monospace, SFMono-Regular, Menlo, monospace';
+          ctx.fillText(`${hz ? hz.toFixed(0) : t('canvas.dash')} Hz`, w / 2, 37);
+
+          const frameMs = hz ? 1000 / hz : 0;
+          ctx.fillStyle = 'rgba(255,255,255,.42)';
+          ctx.font = '10.5px ui-monospace, SFMono-Regular, Menlo, monospace';
+          ctx.fillText(t('canvas.frameInfo', {
+            ms: frameMs ? frameMs.toFixed(2) : t('canvas.dash'),
+            drops
+          }) + (paused ? t('canvas.paused') : ''), w / 2, 55);
+          ctx.textAlign = 'left';
+        };
+
+        const loop = (now) => {
+          if (!last) last = now;
+          const dt = now - last;
+          last = now;
+
+          if (hz && dt > (1000 / hz) * 1.6 && dt < 1000) drops++;
+
+          count++;
+          if (!winStart) winStart = now;
+          if (now - winStart >= 1000) {
+            hz = (count * 1000) / (now - winStart);
+            count = 0;
+            winStart = now;
+            drops = 0;
+            api.sub(t('sub.refreshHz', { hz: hz.toFixed(1), ms: (1000 / hz).toFixed(2) }));
+          }
+
+          if (!paused) x = (x + 7) % Math.max(200, w + 80);
+          draw();
+          raf = requestAnimationFrame(loop);
+        };
+
+        const pauseBtn = el('button', 'ctl-btn');
+        pauseBtn.type = 'button';
+        pauseBtn.textContent = t('ctl.pause');
+        pauseBtn.title = t('ctl.pauseTitle');
+        const togglePause = () => {
+          paused = !paused;
+          pauseBtn.classList.toggle('on', paused);
+          pauseBtn.textContent = paused ? t('ctl.resume') : t('ctl.pause');
+          api.toast(paused ? t('toast.paused') : t('toast.resumed'));
+        };
+        pauseBtn.addEventListener('click', togglePause);
+        api.controls(pauseBtn);
+
+        setup();
+        const onResize = () => setup();
+        window.addEventListener('resize', onResize);
+        api.sub(t('sub.measuring'));
+        raf = requestAnimationFrame(loop);
+
+        return {
+          action: togglePause,
+          lang() {
+            pauseBtn.textContent = paused ? t('ctl.resume') : t('ctl.pause');
+            pauseBtn.title = t('ctl.pauseTitle');
+            api.sub(hz
+              ? t('sub.refreshHz', { hz: hz.toFixed(1), ms: (1000 / hz).toFixed(2) })
+              : t('sub.measuring'));
+          },
+          cleanup() {
+            cancelAnimationFrame(raf);
+            window.removeEventListener('resize', onResize);
+          }
+        };
+      }
+    },
+
+    {
+      id: 'viewing',
+      thumb: 'viewing',
+      mount(api) {
+        const wrap = el('div', 'view-wrap');
+        const colors = ['#d9484d', '#2fbf71', '#3a7bd5', '#d9b04a'];
+        colors.forEach((color) => {
+          const cell = el('div', 'view-cell');
+          cell.style.background = color;
+          wrap.append(cell);
+        });
+        const dot = el('div', 'view-dot');
+        wrap.append(dot);
+        api.root.append(wrap);
+        api.sub(t('sub.viewing'));
+        return { lang() { api.sub(t('sub.viewing')); } };
+      }
+    },
+
+    {
+      id: 'gamma',
+      thumb: 'gamma',
+      mount(api) {
+        const wrap = el('div', 'gamma-wrap');
+        const leftHalf = el('div', 'gamma-half');
+        const rightHalf = el('div', 'gamma-half');
+        const leftCanvas = el('canvas');
+        const rightCanvas = el('canvas');
+        leftHalf.append(leftCanvas);
+        rightHalf.append(rightCanvas);
+        wrap.append(leftHalf, rightHalf);
+        api.root.append(wrap);
+
+        let value = 186;
+
+        const drawLeft = () => {
+          const rect = leftCanvas.getBoundingClientRect();
+          const dpr = Math.min(window.devicePixelRatio || 1, 3);
+          const W = Math.max(1, Math.round(rect.width * dpr));
+          const H = Math.max(1, Math.round(rect.height * dpr));
+          leftCanvas.width = W;
+          leftCanvas.height = H;
+          const ctx = leftCanvas.getContext('2d');
+
+          const tile = document.createElement('canvas');
+          tile.width = 2;
+          tile.height = 2;
+          const tctx = tile.getContext('2d');
+          tctx.fillStyle = '#fff';
+          tctx.fillRect(0, 0, 2, 2);
+          tctx.fillStyle = '#000';
+          tctx.fillRect(0, 0, 1, 1);
+          tctx.fillRect(1, 1, 1, 1);
+
+          ctx.fillStyle = ctx.createPattern(tile, 'repeat');
+          ctx.fillRect(0, 0, W, H);
+        };
+
+        const drawRight = () => {
+          const rect = rightCanvas.getBoundingClientRect();
+          const dpr = Math.min(window.devicePixelRatio || 1, 3);
+          const W = Math.max(1, Math.round(rect.width * dpr));
+          const H = Math.max(1, Math.round(rect.height * dpr));
+          rightCanvas.width = W;
+          rightCanvas.height = H;
+          const ctx = rightCanvas.getContext('2d');
+          ctx.fillStyle = `rgb(${value},${value},${value})`;
+          ctx.fillRect(0, 0, W, H);
+        };
+
+        const ctl = el('label', 'ctl');
+        const lab = el('span');
+        lab.textContent = t('ctl.pureGray');
+        const input = document.createElement('input');
+        input.type = 'range';
+        input.min = '120';
+        input.max = '240';
+        input.step = '1';
+        input.value = String(value);
+        const val = el('b');
+        val.textContent = String(value);
+        const note = el('span', 'gamma-note');
+        ctl.append(lab, input, val, note);
+
+        const resetBtn = el('button', 'ctl-btn');
+        resetBtn.type = 'button';
+        resetBtn.textContent = t('ctl.gammaReset');
+        resetBtn.title = t('ctl.gammaResetTitle');
+
+        const group = el('div', 'ctl-group');
+        group.append(ctl, resetBtn);
+
+        const updateNote = () => {
+          const gamma = Math.log(0.5) / Math.log(value / 255);
+          note.textContent = `γ ≈ ${gamma.toFixed(2)}`;
+          const ok = gamma >= 2.05 && gamma <= 2.35;
+          note.classList.toggle('ok', ok);
+          note.classList.toggle('bad', !ok);
+          api.sub(t('sub.gammaChecker', { v: value }));
+        };
+
+        const resetGamma = () => {
+          value = 186;
+          input.value = '186';
+          val.textContent = '186';
+          drawRight();
+          updateNote();
+          api.toast(t('toast.gammaReset'));
+        };
+
+        input.addEventListener('input', () => {
+          value = Number(input.value);
+          val.textContent = String(value);
+          drawRight();
+          updateNote();
+        });
+        resetBtn.addEventListener('click', resetGamma);
+
+        api.controls(group);
+
+        const drawAll = () => {
+          drawLeft();
+          drawRight();
+        };
+
+        const onResize = () => drawAll();
+        window.addEventListener('resize', onResize);
+        requestAnimationFrame(drawAll);
+        updateNote();
+
+        return {
+          action: resetGamma,
+          lang() {
+            lab.textContent = t('ctl.pureGray');
+            resetBtn.textContent = t('ctl.gammaReset');
+            resetBtn.title = t('ctl.gammaResetTitle');
+            updateNote();
+          },
+          cleanup() { window.removeEventListener('resize', onResize); }
+        };
+      }
+    }
+  ];
+
+  /* ---------------- boot ---------------- */
+
+  [hudLang, reportLang].forEach((btn) => {
+    if (btn) btn.addEventListener('click', () => setLang(nextLang()));
+  });
+  wireStar();
+
+  document.documentElement.lang = lang;
+  applyI18n(document);
+  buildLangSeg();
+  syncLangControls();
+  renderPromo();
+
+  renderHome();
+  updateHomeStats();
+  syncFsIcon();
+
+  if (MISSING.size) console.warn('[i18n] untranslated keys:', Array.from(MISSING).join(', '));
+
+  const startId = location.hash.replace('#', '');
+  const startIndex = tests.findIndex((test) => test.id === startId);
+  if (startId === 'report') {
+    openReport();
+  } else if (startIndex >= 0) {
+    guided = false;
+    openTest(startIndex);
+  }
+})();
+
