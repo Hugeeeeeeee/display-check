@@ -12,7 +12,7 @@
 
 - 直接双击 `monitor-check.html`（单文件版，推荐发给别人或拷贝到别的电脑）。
 - 或者用浏览器打开 `index.html`（开发版，依赖同目录的 `styles.css` 与 `app.js`）。
-- 在线版：<https://display-check.pages.dev>（本地运行，打开就能用）。
+- 在线版：<https://display-check-10.pages.dev>（本地运行，打开就能用）。
 
 Just open `monitor-check.html` — it also works from `file://`, no installation and no network access required.
 
@@ -91,7 +91,7 @@ Just open `monitor-check.html` — it also works from `file://`, no installation
 
 ## Star
 
-仓库：<https://github.com/Hugeeeeeeee/display-check>（在线试用：<https://display-check.pages.dev>）
+仓库：<https://github.com/Hugeeeeeeee/display-check>（在线试用：<https://display-check-10.pages.dev>）
 
 仓库地址只写在 **一处** —— `app.js` 顶部的 `REPO` 常量（改完必须重新执行 `python3 build.py`，否则 `monitor-check.html` 与 `site/` 里的地址不会更新）：
 
@@ -119,7 +119,7 @@ python3 build.py
 1. 把仓库推到 GitHub，在 Cloudflare Pages 选择 *Connect to Git* 并选中该仓库。
 2. 构建设置填 **Framework preset: None**，**Build command** 留空（或写 `python3 build.py`，若平台有 Python），**Output directory** 填 `site`。
    - 如果不想在平台上跑 Python，可以先本地执行 `python3 build.py` 再把 `site/` 一起提交，直接把 Output directory 指向 `site`。
-3. 项目名（即域名）填 `display-check`，得到 `https://display-check.pages.dev`；pages.dev 的项目名全局唯一，若提示已存在，依次试 `screen-check`、`displaycheck10`、`monitor-check`，选定后回来更新本页顶部链接即可。
+3. 项目名（即域名）填 `display-check-10`，得到 `https://display-check-10.pages.dev`。pages.dev 的项目名**全局唯一**：`display-check`、`monitor-check`、`screen-check` 已被他人占用，若 `display-check-10` 也提示已存在，依次试 `displaycheck10`、`monitor-self-check`，选定后回来同步更新本页顶部与「Star」小节的链接。
 4. 后续每次 `git push` 会自动重新部署，几分钟内生效。
 
 `site/_headers` 已配置安全响应头与不缓存 HTML，无需额外设置。站点是纯静态文件，不依赖任何外部资源与网络请求。
@@ -131,7 +131,7 @@ python3 build.py
 - 无后端、无统计、无广告、无外部字体与 CDN，所有请求都在本地完成（`connect-src 'none'` 从响应头层面封死了对外连接）。
 - 不采集也不上传屏幕参数、标记结果与备注；它们只存在你浏览器的 `localStorage` 里，清空浏览器数据即彻底删除。
 - 分享结果靠本地产物：复制文字摘要、打印 / 保存 PDF、导出备份 JSON，内容完全由你掌控。
-- 响应头已关闭摄像头 / 定位 / 支付 / 各类传感器权限，并发送 `Referrer-Policy: no-referrer`，访问记录不会回传给第三方。
+- 响应头已关闭摄像头 / 定位 / 支付 / 各类传感器权限，发送 `Referrer-Policy: no-referrer`，并用 `frame-ancestors 'none'` 禁止被他人页面嵌入，访问记录不会回传给第三方。
 - 项目以匿名作者名义发布（见 `LICENSE`），提交记录使用 GitHub 的 noreply 邮箱，不绑定真实邮箱。
 - 对外链接只有一个 GitHub 仓库地址，且只在普通 `<a>` 标签里出现；页面不发起任何 `fetch`／XHR／WebSocket 请求。
 

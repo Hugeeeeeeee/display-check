@@ -7,6 +7,10 @@
     if (cls) node.className = cls;
     return node;
   };
+  // 备注是用户输入（还可能来自别人发来的备份 JSON），拼进 innerHTML 前必须转义
+  const esc = (text) => String(text).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
 
   const stage = $('#stage');
   const layer = $('#layer');
@@ -652,7 +656,10 @@
     let out = STRINGS[lang] ? STRINGS[lang][key] : undefined;
     if (out === undefined) out = STRINGS[FALLBACK_LANG][key];
     if (out === undefined) {
-      MISSING.add(key);
+      if (!MISSING.has(key)) {
+        MISSING.add(key);
+        console.warn('[i18n] untranslated key:', key);
+      }
       return '???';
     }
     if (params) {
@@ -1272,7 +1279,8 @@
     stage.tabIndex = -1;
     stage.focus({ preventScroll: true });
     wake();
-    if (!document.fullscreenElement) requestFullscreen(!hasUserGesture());
+    // 无用户手势时不要尝试全屏：浏览器会拒绝并在 Console 留下警告（如直接打开 #pixels 分享链接）
+    if (!document.fullscreenElement && hasUserGesture()) requestFullscreen();
   }
 
   function hasUserGesture() {
@@ -1331,26 +1339,24 @@
     openTest(next);
   }
 
-  function requestFullscreen(silent) {
+  function requestFullscreen() {
     if (document.fullscreenElement) {
       if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
       return;
     }
     if (!document.documentElement.requestFullscreen) {
-      if (!silent) showToast(t('toast.fsUnsupported'));
+      showToast(t('toast.fsUnsupported'));
       return;
     }
     let promise;
     try {
       promise = document.documentElement.requestFullscreen();
     } catch (err) {
-      if (!silent) showToast(t('toast.fsDenied'));
+      showToast(t('toast.fsDenied'));
       return;
     }
     if (promise && promise.catch) {
-      promise.catch(() => {
-        if (!silent) showToast(t('toast.fsDenied'));
-      });
+      promise.catch(() => showToast(t('toast.fsDenied')));
     }
   }
 
@@ -1439,7 +1445,7 @@
             <span class="idx">${String(i + 1).padStart(2, '0')}</span>
             <span class="name">${testName(test.id)}</span>
             <span class="state">${state}</span>
-            ${note ? `<span class="note">✎ ${note}</span>` : ''}
+            ${note ? `<span class="note">✎ ${esc(note)}</span>` : ''}
           </button>`;
       }).join('');
     }
@@ -1562,7 +1568,18 @@
           }
         });
         if (p.notes && typeof p.notes === 'object') {
-          progress.notes = Object.assign(progress.notes || {}, p.notes);
+          const notes = progress.notes || {};
+          let changed = false;
+          tests.forEach((test) => {
+            const value = p.notes[test.id];
+            if (typeof value !== 'string') return;
+            const clean = value.trim().slice(0, 300);
+            if (clean && clean !== notes[test.id]) {
+              notes[test.id] = clean;
+              changed = true;
+            }
+          });
+          if (changed) progress.notes = notes;
         }
         saveProgress();
         renderHome();
@@ -1645,7 +1662,7 @@
   btnNextIcon.addEventListener('click', () => navigate(1));
   btnNext.addEventListener('click', () => navigate(1));
   btnReport.addEventListener('click', openReport);
-  btnFs.addEventListener('click', () => requestFullscreen(false));
+  btnFs.addEventListener('click', () => requestFullscreen());
   $('#btnClose').addEventListener('click', closeTest);
 
   let resetTimer = 0;
@@ -1901,7 +1918,7 @@
         break;
       case 'f':
       case 'F':
-        requestFullscreen(false);
+        requestFullscreen();
         break;
       case 'p':
       case 'P':

@@ -53,7 +53,7 @@ python3 build.py
 - **不代为执行** `git init` / `commit` / `push` / 远程设置变更，也不改 git 配置；先说明准备执行的命令与内容，得到明确确认后再做。
 - 不使用 `push --force`、`branch --force` 等破坏性操作；需要重建历史时改用新建分支。
 - 部署：GitHub → Cloudflare Pages → *Connect to Git* → Framework preset **None**、Build command **留空**、Output directory **`site`**、production branch 与实际分支一致。
-- 线上域名 `display-check.pages.dev`；README 顶部链接与该域名保持一致。
+- 线上域名 `display-check-10.pages.dev`（`display-check` 这个 Pages 项目名已被他人占用）；README 顶部与「Star」小节的链接与该域名保持一致，域名变更时三处一起改。
 
 ## 6. 交付前自检清单
 
