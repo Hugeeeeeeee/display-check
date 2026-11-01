@@ -12,7 +12,7 @@
 
 - 直接双击 `monitor-check.html`（单文件版，推荐发给别人或拷贝到别的电脑）。
 - 或者用浏览器打开 `index.html`（开发版，依赖同目录的 `styles.css` 与 `app.js`）。
-- 在线版：<https://display-check-10.pages.dev>（本地运行，打开就能用）。
+- 在线版：<https://displaycheck.pages.dev>（本地运行，打开就能用）。
 
 Just open `monitor-check.html` — it also works from `file://`, no installation and no network access required.
 
@@ -91,7 +91,7 @@ Just open `monitor-check.html` — it also works from `file://`, no installation
 
 ## Star
 
-仓库：<https://github.com/Hugeeeeeeee/display-check>（在线试用：<https://display-check-10.pages.dev>）
+仓库：<https://github.com/Hugeeeeeeee/display-check>（在线试用：<https://displaycheck.pages.dev>）
 
 仓库地址只写在 **一处** —— `app.js` 顶部的 `REPO` 常量（改完必须重新执行 `python3 build.py`，否则 `monitor-check.html` 与 `site/` 里的地址不会更新）：
 
@@ -116,15 +116,21 @@ python3 build.py
 
 ## 部署到 Cloudflare Pages
 
-1. 把仓库推到 GitHub，在 Cloudflare Pages 选择 *Connect to Git* 并选中该仓库。
-2. 构建设置填 **Framework preset: None**，**Build command** 留空（或写 `python3 build.py`，若平台有 Python），**Output directory** 填 `site`。
-   - 如果不想在平台上跑 Python，可以先本地执行 `python3 build.py` 再把 `site/` 一起提交，直接把 Output directory 指向 `site`。
-3. 项目名（即域名）填 `display-check-10`，得到 `https://display-check-10.pages.dev`。pages.dev 的项目名**全局唯一**：`display-check`、`monitor-check`、`screen-check` 已被他人占用，若 `display-check-10` 也提示已存在，依次试 `displaycheck10`、`monitor-self-check`，选定后回来同步更新本页顶部与「Star」小节的链接。
-4. 后续每次 `git push` 会自动重新部署，几分钟内生效。
+线上站点 <https://displaycheck.pages.dev> 使用 **Direct Upload** 部署，产物就是仓库里的 `site/` 目录，云端不需要执行任何构建。更新站点两种方式任选：
+
+1. **Direct Upload**：本地先执行 `python3 build.py`，再把 `site/` 拖到 Pages 项目的上传区，或用 wrangler 一条命令：
+
+   ```bash
+   npx wrangler pages deploy site --project-name displaycheck
+   ```
+
+2. **连接 Git 自动部署**：在 Cloudflare Pages 选择 *Connect to Git* 并选中本仓库，构建设置填 **Framework preset: None**、**Build command 留空**、**Output directory** 填 `site`、production branch 填 `main`。`site/` 已经提交在仓库里，所以云端无需构建；之后每次 `git push` 自动重新部署，几分钟内生效。
+
+pages.dev 的项目名**全局唯一**：`display-check`、`monitor-check`、`screen-check` 已被他人占用，本项目用的是 `displaycheck`。自行部署时若提示名称已存在，换一个后记得回到本页同步更新顶部与「Star」小节的链接（连同本小节，三处一起改）。
 
 `site/_headers` 已配置安全响应头与不缓存 HTML，无需额外设置。站点是纯静态文件，不依赖任何外部资源与网络请求。
 
-*Deployment in short: push to GitHub → Cloudflare Pages → Connect to Git → Framework preset **None**, Build command **empty**, Output directory **`site`**, production branch **`main`**. Every push redeploys automatically; no build step is needed in the cloud because `site/` is committed.*
+*Deployment in short: the live site at `displaycheck.pages.dev` is a Pages **Direct Upload** of the committed `site/` folder — refresh it with `npx wrangler pages deploy site --project-name displaycheck` after running `python3 build.py`, or connect the GitHub repo instead (**Framework preset: None**, **Build command empty**, **Output directory `site`**, production branch **`main`**) and every push redeploys automatically. No build step runs in the cloud because `site/` is already committed.*
 
 ## 隐私
 
