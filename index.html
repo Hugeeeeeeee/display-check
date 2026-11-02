@@ -23,7 +23,7 @@
 
 <main class="home" id="home">
   <div class="topbar">
-    <div class="seg" id="langSeg" role="group" aria-label="界面语言"></div>
+    <div class="seg" id="langSeg" role="group" aria-label="界面语言" data-i18n-attr="aria-label:lang.aria"></div>
     <a class="star-link" id="starLink" href="#" target="_blank" rel="noopener noreferrer">
       <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.46-.25-.78-.6-.01-.62.72-.01 1.23.66 1.4.94.94-.85 1.46-.6 1.53-.46.05-.19.11-.6.11-1.19 0-.66-.23-1.13-.6-1.39-.2-.05-.42-.1.6-.19.38 0 .76.05 1.05.28 0 .19.01.45.01.63 0 .22.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
       <span data-i18n="star.link">GitHub</span>
@@ -54,7 +54,7 @@
 
     <aside class="readout" aria-label="屏幕信息" data-i18n-attr="aria-label:aria.readout">
       <div class="stat"><div class="k" data-i18n="stat.res">分辨率</div><div class="v" id="statRes">—</div></div>
-      <div class="stat"><div class="k" data-i18n="stat.hz">刷新率</div><div class="v" id="statHz">测量中…</div></div>
+      <div class="stat"><div class="k" data-i18n="stat.hz">刷新率</div><div class="v" id="statHz" data-i18n="stat.measuring">测量中…</div></div>
       <div class="stat"><div class="k" data-i18n="stat.dpr">像素比</div><div class="v" id="statDpr">—</div></div>
       <div class="stat"><div class="k" data-i18n="stat.gamut">色域 / HDR</div><div class="v" id="statGamut">—</div></div>
     </aside>
@@ -157,7 +157,7 @@
     <div class="verdict" id="reportVerdict">
       <div class="verdict-icon" id="verdictIcon">✓</div>
       <div class="verdict-copy">
-        <strong id="verdictTitle">还差 10 项未测</strong>
+        <strong id="verdictTitle" data-i18n="verdict.notStarted">还没有开始检测</strong>
         <span id="verdictSub">完成检测后会在这里生成结论。</span>
       </div>
     </div>
